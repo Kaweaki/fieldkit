@@ -1,0 +1,556 @@
+# FieldKit - build and code process
+
+FieldKit (`se.blimark.fieldkit`) is a single, self-contained Android app for an
+offline phone: an 11-tile main menu, wallpapers drawn on the device, USB and
+Bluetooth tooling, survival calculators, a party-aware profile store, a passcode
+lock and a share screen. This file records how it is put together and how to
+rebuild and verify it. It contains no personal data: no names, no profiles, no
+nightly routine, no passcode.
+
+Version described here: 2.6 (versionCode 17).
+
+--------------------------------------------------------------------------------
+## 1. Environment
+
+- Host tools: Android SDK build-tools 35.0.0 (`aapt2`, `d8`, `zipalign`,
+  `apksigner`), platform `android-34/android.jar`, JDK 17 running `javac
+  --release 8`.
+- No gradle, no AndroidX, no network access at build time. The app is plain
+  Java against the framework `android.jar` only.
+- Build-tools 34's `d8` crashes on this source set, so 35.0.0 is used.
+
+`app/build.sh`:
+
+1. `aapt2 compile --dir res -o build/res.zip`
+2. `aapt2 link -o build/pkg/base.apk -I android.jar --manifest
+   AndroidManifest.xml --min-sdk-version 21 --target-sdk-version 34 --java
+   build/gen --version-code 17 --version-name 2.6 build/res.zip`
+3. `javac --release 8 -nowarn -classpath android.jar -d build/classes $(find src
+   -name '*.java') $(find build/gen -name '*.java')`
+4. `d8 --lib android.jar --min-api 21 --output build/dex <all classes>`
+5. add `classes.dex` to the linked APK with `zip -j`
+6. `zipalign -f -p 4`
+7. `apksigner sign --ks debug.keystore --ks-pass pass:android --key-pass
+   pass:android --out FieldKit.apk`
+8. `apksigner verify`
+
+Every screen still builds its views in code; `--java` exists only so the
+home-screen widget can name `R.layout.widget` and its three ids. Without a
+widget or layout, `--java` can be dropped and the screens compile as before.
+
+### Installing on a locked-down device
+
+A fresh package can be refused with `INSTALL_FAILED_VERIFICATION_FAILURE`.
+Workaround used during development, then reverted:
+
+```
+adb shell settings get global package_verifier_enable      # note the value
+adb shell settings put global package_verifier_enable 0
+adb install -r FieldKit.apk
+adb shell settings put global package_verifier_enable <old value>
+```
+
+--------------------------------------------------------------------------------
+## 2. Source layout
+
+`app/src/se/blimark/fieldkit/`
+
+| File | Role |
+| --- | --- |
+| `MainActivity` | 11-tile main menu, locked banner, passcode guard, pending-tile handoff |
+| `ToolsActivity` | list of the 10 calculators; `TITLES`/`SUBS` live here |
+| `ToolActivity` | the calculators and the "for everyone" party buttons |
+| `ProfileStore` | people list, flags, statuses, party maths |
+| `ProfileActivity` | editable party cards and status fields |
+| `SettingsActivity` | owner name, passcode, delete-everything, appearance, advanced mode, widget maker, about |
+| `UnlockActivity` | full-screen keypad passcode pad |
+| `ShareActivity` | send a file from the phone, share a note |
+| `WallpaperActivity` | home wallpaper and the nightly routine lock wallpaper |
+| `EmergencyActivity` | 10 drawn protocols and an IF YOU SEE / OPEN table |
+| `LinkActivity` | USB list with live rescan, top-right menu, PC link card, radio entry |
+| `UsbActivity` | USB descriptors, CDC-ACM / CP210x console |
+| `BtActivity` | BLE + classic scan, OUI guess, phone estimate, ping all |
+| `GattActivity` | BLE browser: LE transport, retry on 133, plain-language error card |
+| `SppActivity` | classic Bluetooth serial (SPP) client console |
+| `PcLinkActivity` | Bluetooth serial server a computer can pair with |
+| `HelpActivity` | the manual: tiles, can/cannot, error meanings, compatibility |
+| `Adv` | advanced-mode preference and GATT status wording |
+| `FieldKitWidget` | home-screen widget provider (RemoteViews) |
+| `AdvActivity` | radio facts, channel/frequency converter, honest limits |
+| `Oui` | hand-picked OUI slice |
+| `Ui` | palettes, cards, chips, buttons, backgrounds |
+| `GridDrawable` | blueprint grid background |
+| `GlyphView` | 10 menu glyphs, drawn with `Canvas` |
+| `IconView` | 10 protocol icons, drawn with `Canvas` |
+| `ApkProvider` | `FileProvider` for handing the APK to another phone |
+| `Lock` | SHA-256 passcode, per-process unlocked flag |
+
+`AndroidManifest.xml`: 24 activities and one widget receiver, `SET_WALLPAPER`,
+`READ`/`WRITE_EXTERNAL_STORAGE`, `usb.host`, `BLUETOOTH`, `BLUETOOTH_ADMIN`,
+`ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`, `ACCESS_WIFI_STATE`,
+`CHANGE_WIFI_STATE`, `NEARBY_WIFI_DEVICES`, `ACCESS_NETWORK_STATE` and
+`INTERNET`. The internet permission exists only for the opt-in local peer
+socket; no remote address is hardcoded and no cloud is used.
+
+--------------------------------------------------------------------------------
+## 3. What each part does
+
+### Main menu
+Eleven tiles in a 3-column grid, each with a hand-drawn glyph, a title and a
+one-line subtitle: Profile, Settings, Medical, Calculator, Link, Share, Screens,
+Library, Maps, Comms, Help. Medical carries a red frame. The header shows an
+optional owner name from settings and the version string. Library, Maps and
+Comms fire explicit intents at Kiwix, Organic Maps and Briar; Help opens the
+manual and never asks for the passcode; the others are internal.
+
+### Wallpapers
+Both wallpapers are drawn at runtime with `Canvas` and installed through
+`WallpaperManager` with the normal `SET_WALLPAPER` permission - no image files,
+no helper app:
+
+- Home: black field, hairline card frame, a campfire glyph, the FIELDKIT
+  wordmark, a rule and the line "WATER POWER RADIO MEDICAL".
+- Lock screen: the nightly routine typed into the app, five timed lines, with the
+  campfire moved down to clear the padlock. If no routine is written, the app
+  says so and offers the editor.
+
+### USB
+`UsbManager` device list, then per device: vendor/product ids, manufacturer and
+product strings when the device exposes them, configuration/interface/endpoint
+descriptors, and a console for CDC-ACM and CP210x bridges. If a device has no
+serial interface the app says so rather than pretending. USB-C works through an
+OTG adapter; the phone is the host, the other device is the peripheral.
+
+### Bluetooth
+`BluetoothLeScanner` plus a classic `ACTION_FOUND` receiver, deduplicated by MAC
+into one list. For each address the app tries the OUI table, and when the
+address is random it falls back to a transport heuristic and labels the result
+"guess" - never presenting a guess as a fact. From the list:
+
+- a count of devices, a best-effort count of phones and a count of boards;
+- PING ALL, which attempts a connection to every device and reports how many
+  answered;
+- SORT, which orders by kind or signal;
+- the ADV screen, from the top-right menu on Link or the button on the radio
+  screen.
+
+### ADV / radio
+Android exposes no API to retune the phone's own transmitter, and the app says
+that plainly. Instead it reads the real radio facts (Bluetooth state, own
+address, LE support, paired count, Wi-Fi association) and does the arithmetic
+between FM frequencies and channels, so a frequency read off a label can be
+turned into a channel number and back.
+
+### Calculators
+Ten tools including water, food rations, power, distance, dosage and radio
+line-of-sight. The provisioning tools (water, rations and friends) carry "FOR
+EVERYONE" buttons that run the same maths across every person in the party, so a
+pregnant person's water and a diabetic person's ration are accounted for
+separately and then totalled.
+
+### Profiles and party maths
+`ProfileStore` keeps a list of people, each with a name, body mass, flags
+(pregnant, diabetes, child), an activity level and a free-text status. Storage is
+one `name|kg|flags|activity|status` line per person under the preference key
+`people_list`. The maths:
+
+- water: base millilitres scaled by body mass and activity, plus an allowance
+  when pregnant;
+- energy: estimated kcal from mass, activity and age band, with flags adjusting
+  the figure;
+- tags: short human labels shown on the card.
+
+Statuses are per person and appear on that person's card, so the profile tab
+doubles as a small log.
+
+### Lock
+Settings can set a numeric passcode. Only a SHA-256 hash is stored. While a code
+is set:
+
+- the grid shows a LOCKED banner and Profile, Settings, Share and Screens ask
+  for the code;
+- any of those activities started directly re-checks and redirects to the pad;
+- the calculators, medical protocols, library, maps and comms keep working;
+- none of the protected screens can display a stored profile, a status or the
+  routine, because they never open without the code.
+
+The pad is a full-screen keypad (`UnlockActivity`): filled/empty dots, digits,
+clear and back, an UNLOCK button, and an inline "wrong code - try again". A
+wrong entry clears the dots and leaves the pad in place - no dismissing dialog
+and no bouncing back to the grid. A correct entry returns to whatever tile was
+tapped. The unlocked flag lives only for the life of the process, so a cold
+start asks again. There is no recovery path by design; the note on the pad says
+so and points at Android's app settings for a reset.
+
+### Settings
+Owner name (blank hides the header name), passcode set/remove, palette and
+background, advanced mode, the home-screen widget maker, delete-everything
+behind a confirmation dialog, and the about card. The owner name is stored in
+preferences on the device, never in the APK, so a copy handed to someone else
+starts with no name. Advanced mode is one preference (`advanced`): normal mode
+names a failure in one sentence, advanced mode adds the numeric code, its hex
+form and the transport. It adds no permission and changes no behaviour.
+
+### Share
+Pick a file with `ACTION_GET_CONTENT` and send it through `ACTION_SEND`, or share
+a typed note. The app can also hand out its own APK through its `FileProvider`,
+which is how it gets onto a second phone without a cable or a store.
+
+### Link: rescan, menu and the PC
+The USB card re-reads `UsbManager` on entry, on the rescan button, and from a
+receiver for `ACTION_USB_DEVICE_ATTACHED`/`DETACHED`, so plugging a board in
+updates the list without leaving the screen. It prints a timestamp and the
+count, so a scan that finds nothing still visibly did something. When the phone
+is on USB power with no host devices it says so plainly: the phone is the device
+end of that cable, a computer sees a phone and not a serial port. That case
+points at the PC card, which opens `PcLinkActivity`: the phone listens on the
+standard SPP UUID, shows its Bluetooth name, and a computer that pairs gets a
+real COM port. The top-right three dots open a `PopupMenu` with rescan, the
+advanced radio screen, the advanced-mode switch and Help.
+
+### BLE failures and advanced mode
+`GattActivity` connects with `TRANSPORT_LE` on API 23+, closes any previous GATT
+client first, and waits 12 seconds before deciding the device never answered.
+When the first attempt dies with status 133 - a known Android quirk - it retries
+exactly once before giving up. Every failure shows a red WHAT WENT WRONG card
+above the service table with one actionable sentence: already linked elsewhere,
+out of range, needs pairing, or closed by the device. Advanced mode adds the
+numeric GATT status, its hex code, the transport and the attempt count. `Adv`
+holds both the preference and the status wording.
+
+### Help
+The eleventh tile opens `HelpActivity`, which never asks for the passcode: what
+the kit is, which systems it runs on, every tile in one line, what it can do,
+what it cannot do, a plain-language error table, and a status-code table shown
+only in advanced mode.
+
+### Home-screen widget
+`FieldKitWidget` is an `AppWidgetProvider` with a three-line `RemoteViews`
+layout (title, body, hint). The Settings card picks what it shows - party
+summary, water and energy for the first profile, that profile's status, or the
+passcode state - stores the choice under `widget_what` and calls
+`AppWidgetManager.updateAppWidget` for every instance. It refreshes every half
+hour (`updatePeriodMillis`), opens `MainActivity` on tap, and while a passcode is
+set and the process is locked it prints "locked" instead of any stored data.
+
+### Compatibility
+One APK, `minSdkVersion 21`, `targetSdkVersion 34`, plain framework Java: no
+AndroidX, no Play services, no `INTERNET` permission. It installs on AOSP,
+GrapheneOS, LineageOS, OxygenOS, One UI and the rest of Android 5.0+. Calls that
+need a newer API (`connectGatt(..., TRANSPORT_LE)`, `FLAG_IMMUTABLE`) are behind
+`Build.VERSION.SDK_INT` checks. Ubuntu Touch and other non-Android Linux phones
+cannot install an APK; Waydroid can run this one, and a native port would be a
+separate app.
+
+--------------------------------------------------------------------------------
+## 4. Look and feel
+
+`Ui` holds the palette as mutable statics set at the top of every `onCreate` by
+`Ui.apply(this)`, so switching the scheme and recreating an activity is enough to
+re-skin the whole app. Four schemes: field (amber/teal, the standard), ember,
+moss and ice. Two backgrounds: the blueprint grid (`GridDrawable`, drawn with
+`Canvas`) or plain black. Cards are `GradientDrawable` boxes with a one-pixel
+edge and 18 dp corners; buttons and chips share the same helpers, so a new screen
+looks native to the app by construction.
+
+Because the colours are baked into views when they are built, any screen that
+outlives a settings change must be rebuilt itself. `MainActivity` remembers the
+palette, the background and the lock state it was drawn with and calls
+`recreate()` in `onResume` when any of them has changed; without that the grid
+keeps the old colours (and a stale LOCKED banner) until the app is restarted.
+
+--------------------------------------------------------------------------------
+## 5. Verifying by cable
+
+The device is driven over `adb` with `uiautomator dump` plus a small helper that
+finds a node by its text and prints its centre, then `input tap`. Text on
+action and secondary buttons is uppercased by `Ui`, and the text of a dump
+carries the uppercase form, which is what the helper must be given.
+
+Checks used for 2.1 and 2.2:
+
+- cold start with a code set: LOCKED banner present, Profile opens the pad;
+- pad: four wrong digits, UNLOCK -> "wrong code - try again", pad still up;
+- right code -> the tile that was tapped opens;
+- settings: remove the code -> "off - ...";
+- palette ice + plain background -> grid re-skins, header name intact;
+- back to field + blueprint grid;
+- calculator -> food rations -> FOR EVERYONE -> per-person kcal and grain total;
+- share screen -> "Pick a file to send";
+- Help tile opens the manual with the runs-on, tiles, can/cannot and error
+  sections;
+- Link: the three-dot menu lists rescan, advanced radio facts, the advanced-mode
+  switch and Help; the scanned line carries a timestamp and the cable state;
+- PC link: LISTEN -> "waiting for a computer" with the phone name and
+  "FIELDKIT serial (SPP)";
+- advanced mode: Settings saves it, the Link menu then reads "Advanced mode:
+  on", and switching it off from the menu flips it back;
+- widget card: party/water/status/passcode chips render, the provider appears in
+  `dumpsys appwidget`, the layout compiles into the APK;
+- APK strings contain no owner name, town or test passcode;
+- `logcat -b crash` free of the package; `dumpsys activity services` empty (no
+  background services).
+
+Screenshots are captured with `adb exec-out screencap -p`.
+
+--------------------------------------------------------------------------------
+## 6. Limits worth knowing
+
+- Android has no public API to tune the phone's FM transmitter or receiver to a
+  chosen frequency; ADV shows real radio facts and arithmetic instead of
+  pretending otherwise.
+- Randomised Bluetooth addresses defeat OUI lookup; those rows are marked as
+  guesses.
+- USB serial needs an OTG adapter and a bridge chip the app knows (CDC-ACM or
+  CP210x); other bridges are identified but cannot be driven.
+- Nothing runs in the background: no services, no periodic work except the
+  widget's half-hour refresh; receivers are the widget update, the USB attach
+  listener while Link is open, and the Bluetooth scan while the radio screen is
+  open. No internet permission.
+- The status-133 retry and the BLE error card are compiled and installed, but no
+  real BLE peripheral was available to connect to in this round; the PC link was
+  verified listening, not paired to an actual computer.
+- The widget has to be placed from the launcher's widget picker; asking the
+  launcher to pin it was not implemented.
+
+--------------------------------------------------------------------------------
+## 7. Versions 2.3 and 2.4
+
+### Active survey (off until switched on)
+`Survey` holds the opt-in switch, the two source switches and the repeat mode
+(`once`, `30 s`, `2 min`). `IntelActivity` scans wifi (`WifiManager.startScan`
+plus cached `getScanResults`, because Android throttles the broadcast) and BLE
+plus classic discovery for 12 seconds, classifies security from the
+capabilities (`WPA3-SAE`, `WPA2-PSK`, enterprise, WEP, open), converts frequency
+to channel and writes each sighting to `Intel`. Wifi results need location on
+and the fine-location permission; the app never reads the location itself.
+Rows are deduplicated by BSSID/MAC, the list is capped at 400, and every scan
+can be shared as text or cleared. Low battery mode refuses to start under 15%
+and floors the repeat interval at two minutes.
+
+### AES-256-GCM vaults and passcode record
+`Crypto` uses an AES-256-GCM key in the Android keystore (API 23+) for the
+survey log, the roster and the passcode record; on Android 5 the key is derived
+with PBKDF2 from the stored passcode, and with no passcode the screen says the
+log is plain rather than pretending. `Lock` now stores salted PBKDF2-HMAC-SHA1
+(120 000 rounds) and rewrites any 2.2 SHA-256 record on the next successful
+unlock. The passcode record is additionally wrapped with AES-GCM, so reading
+the preference file does not expose the hash. The peer beacon uses a separate
+AES-GCM key derived from a group network code, never from the passcode.
+
+### Peers on the local network
+`PeerActivity` opens a UDP socket on 47777, broadcasts `FK1|id|name|lat|lon|time` sealed
+with AES-256-GCM every four seconds while the screen is open, and prints peers
+with distance and compass bearing from the phone's own fix. A phone with a
+different network code cannot decode the packet. No server, no remote address.
+Presence works with location off but direction stays blank on either side
+without a fix. Peers are added to the roster only if the peers switch is on.
+
+### Roster by transport
+`Roster` keeps cable, bluetooth, wifi and peer entities separately. Each
+transport has its own save switch, cable is the only one on by default, and
+`RosterActivity` lists every kept entry with a REMOVE button and a clear-all.
+The cable list refreshes on attach/detach; opening a USB device's details now
+requires the passcode when one is set.
+
+### Own map
+`MapActivity` loads a raster MBTiles file and `MapView` draws tiles with drag,
+double-tap and pinch zoom, a crosshair, scale bar, GPS dot and named waypoint
+pins. The file is copied into app storage; the reliable route is the app folder
+(`Android/data/se.blimark.fieldkit/files/fieldkit.mbtiles`) because the public
+Download folder was refused under this build's restricted storage grant. The
+picker route is kept. Waypoints can be named, renamed, deleted and jumped to.
+
+### Profiles, emergency, sharing, low power
+Profiles now carry an optional age plus additive condition and allergy lists,
+regular medicines and free text; pregnancy and diabetes still adjust the water
+and energy maths. Emergency has 30 extra conditions with explicit `WHEN IT
+FITS` criteria, shown only in advanced mode. Share has a metadata switch: images
+are decoded and re-encoded (dropping EXIF, including GPS) when on, and the
+setting lives in Settings, with a per-send override. Other file types are sent
+byte for byte. Low battery mode stops the decorative grid, slows the survey and
+blocks a scan under 15%.
+
+### Security review, 2.4
+- `allowBackup=false`, `usesCleartextTraffic=false`; no exported activity except
+  the launcher, no WebView, no javascript bridge, no `Runtime.exec`, no shell.
+- Passcode: salted PBKDF2 with constant-time compare, AES-wrapped record.
+- Vaults AES-GCM; peer packets AES-GCM; a wrong network code yields no output.
+- SQL uses selection arguments; the cache provider rejects path traversal.
+- Cable detail is gated behind the passcode; the phone cannot be made to answer
+  a USB host with its own data because Android gives apps no USB device mode.
+- Remaining risk stated plainly: the passcode is app-level, not disk encryption;
+  a rooted or unlocked phone can read the app's memory while it is open.
+
+### Checks run
+- survey: 65+ sightings sealed, wifi rows returned via the cached path,
+  per-source counters and the AES label visible; advanced mode toggles the
+  detailed rows;
+- map: test MBTiles (16 coloured tiles, zoom 2-2) loads from the app folder and
+  renders all tiles, scale bar and coordinate readout; a waypoint named `camp`
+  saves and pins;
+- roster: settings chips cable/bluetooth/wifi/peers and the saved-list screen
+  render; entries can be removed;
+- share: metadata card and the per-send switch render; the image re-encode path
+  is compiled but was not exercised with a real photo in this round;
+- help: ENCRYPTION - ALWAYS ON present; no stale "no internet permission" copy;
+- no crash entries for the package, no background service.
+
+### Limits added by 2.3/2.4
+- Peer direction needs a fix on both phones; without GPS only presence is shown.
+- Peer discovery is one subnet; many guest wifi networks isolate clients.
+- Public Download import was blocked by a restricted storage grant on this
+  build; the app-folder route works and is documented on screen.
+- Metadata stripping covers images (EXIF); PDF, DOCX and archives keep their
+  internal properties, and transport encryption is whatever Bluetooth or
+  Wi-Fi Direct provides.
+- Two-phone peer tests were not possible here; the beacon starts and the off
+  screen was verified, but no second FieldKit phone was present.
+
+--------------------------------------------------------------------------------
+## 8. Version 2.5
+
+### Launcher icon
+`res/drawable/ic_launcher.xml` is a 108 dp vector: a rounded near-background
+plate (`#10151C`, a shade off the app's `#0B0E12`), a solid amber flame, a darker
+amber inner flame, and an amber X below it. No bitmap densities, so one file
+covers every density; the launcher masks the corners on newer systems.
+
+### First-run permission review (`ConsentActivity`)
+`Consent` stores `consent_ok`, an optional `consent_prompt` for every start, and
+four app-level capability switches (`files`, `location`, `bluetooth`, `peers`).
+The screen lists what the app may use with its real Android state (granted / not
+granted / granted at install), what each is for, and a separate section naming
+contacts, phone state, call log, SMS, calendar, camera, microphone, body sensors
+and activity recognition as *never requested* - they are not in the manifest at
+all. Approving writes the switches and continues; a button opens the system app
+settings for the real grants. `MainActivity` opens the review when it is not
+approved or when "ask on every start" is on, and Settings has a PERMISSIONS card
+with the same toggle and a review button. Survey, peer and map-location actions
+check the app-level switches before they run, so turning one off is a real
+promise rather than a label.
+
+### Favourites (`Fav`, `ToolsActivity`, `LibraryActivity`)
+Calculator stars live in `fav_tools`; starred tools are rendered first and the
+star toggles in place. Library favourites are `title|book|page` lines in
+`fav_library`, added from a small form, removable with the outline star. Opening
+tries, in order: the exact `content://`, `kiwix://` or `http(s)://` link; the
+Kiwix content form `content://org.kiwix.kiwixmobile.zim.base/<book>/<page>`; the
+`kiwix://<book>/<page>` form; then opens Kiwix and says the installed version did
+not take the page link. Nothing about the ZIM content is copied or read.
+
+### Checks run
+- icon visible in the system App info as flame over X on the near-background;
+- fresh install opened the review; approving wrote the switches and the grid
+  came up at 2.5; Settings PERMISSIONS showed "approved";
+- calculator: star filled in place, 9 visible rows unaffected, unstar restored;
+- library: added Water / wikipedia / A/Water, the starred row appeared, the
+  outline star removed it and the empty state returned;
+- no crash entries, no background service.
+
+### Limits
+- Kiwix is not installed on this test phone, so the actual deep link could not
+  be exercised; the fallback and the exact-link candidates are compiled and the
+  screen explains the fallback.
+- The app-level switches are a self-imposed promise; only the Android app
+  settings can revoke a real grant.
+- The review currently asks on first run and optionally on every start; it does
+  not re-prompt when a system permission is revoked mid-session.
+- The delete-everything button clears preferences, files and the people list.
+  It was built and compiled but not exercised on a real profile set.
+
+--------------------------------------------------------------------------------
+## 9. Version 2.6
+
+### Survey results you can act on
+`IntelActivity` now renders live and stored results through one list renderer.
+Every row is clickable and opens an analysis dialog with the kind, address,
+detail, RSSI, a rough distance from the signal, the OUI guess, and the time it
+was seen. The dialog offers `Save this device` / `Remove from saved`, `Share`
+and `Close`.
+
+Pins are kept in `Intel.SAVED` (`saved_devices`), sealed with the same AES key as
+the log. `Intel.setSaved` stores `kind:id`; `Intel.savedSet` drives rendering.
+Pinned devices sort ahead of everything else, get an amber border and an
+`★ SAVED` label, and are also added to the matching roster kind. The same
+colour and position return on every scan, including after a cold start. The
+counter line reads `wifi`, `bluetooth`, `saved` and `log` separately.
+
+### The restart problem
+`IntelActivity` now records `drewOn = Survey.on(this)`. `onResume` recreates the
+activity when the setting changed while it was in the background, and opens the
+live screen instead of leaving the old “off” page in place. The first resume of
+the live screen auto-starts one scan, so a phone that was left with the survey
+on starts working when the screen opens. `onPause` still seals and stores the
+partial scan; nothing runs in the background.
+
+### Settings folds
+Every top-level settings card is converted after it is built: the small title
+becomes a tappable header with a `+`, the controls move into a hidden body, and
+the header toggles `+` / `−`. The page is now thirteen short headers rather
+than one very long list; the tip says so.
+
+### Start screen and first run
+Each of the eleven tiles has its own muted edge colour (`EDGE_COLOURS`), and the
+Medical tile alone uses a two-pixel edge and a slightly warmed title. The tile
+version reads 2.6.
+
+`IntroActivity` runs once after the permission review. It says plainly that
+FieldKit is an index and tool set, not an archive: articles live in Kiwix as a
+downloaded ZIM, the map reads an MBTiles file, and no media is bundled. It also
+lists four first-hour steps and links to Help. `Consent.introSeen` stores the
+acknowledgement; approving the review or opening Main starts it, and Back counts
+as read so it cannot loop. Help repeats the same explanation under
+`WHAT THIS IS` and adds a `BEFORE THE FIRST TRIP` section.
+
+### Map fallback and tools
+The hard-coded Organic Maps button is gone. `map_fallback` defaults to empty
+(“none”). `pickFallback` queries installed activities that answer a `geo:`
+intent, offers `none` first, and stores only the chosen package. `openFallback`
+sends `geo:0,0?q=<lat>,<lon>(<label>)` with that package, so FieldKit and the
+other app exchange a normal map point without either reading the other's data.
+The test phone had Organic Maps installed; selecting it and sending the
+crosshair launched it. The picker itself was the only list shown.
+
+New `MAP TOOLS`: go to a coordinate (validated latitude/longitude, zooms to 14),
+copy the crosshair to the clipboard, share it as text plus a `geo:` link, and
+send it to the fallback app. The waypoint action sheet gained `send to the
+fallback app`. The Manifest gained a `<queries>` entry for `geo:` and both Kiwix
+packages for Android 11+ visibility.
+
+### Library starter shelf and Kiwix links
+Opening a favourite now tries `zim://<book>/<page>` first (the scheme used by
+Kiwix 3.12+), then the content-provider form, then `kiwix://`, with slashes
+preserved in the page path. The Library has a ten-item starter shelf (Water,
+water purification, first aid, fire making, navigation, severe weather, radio,
+food preservation, sanitation, emergency management). Because a ZIM book id
+includes its download date, each shelf item opens Kiwix's own search; `Star the
+ten starter searches` stores them as `title||search:term` favourites, and the
+list labels them as searches. `ACTION_SEARCH` is used, with a plain Kiwix launch
+and a toast if the installed build does not answer it.
+
+### Checks run
+- update from 2.5 opened the new intro once; Back and the button both mark it
+  seen; the grid came up at 2.6 with eleven differently edged tiles;
+- Settings opened as folds; ACTIVE SURVEY expanded in place; turning it on saved
+  and the survey screen then auto-scanned;
+- a live BLE device was saved from its analysis dialog, moved to the top with an
+  amber border and `★ SAVED`, and was still first after force-stop/restart;
+- tapping the pinned row reopened the analysis with address, signal, rough
+  distance, OUI guess, time and `REMOVE FROM SAVED`;
+- Map: fallback showed `none` by default, the picker listed Organic Maps, the
+  choice persisted, and `send the crosshair there` resumed Organic Maps;
+- `go to a coordinate` moved the map to 51.5, 0.12 (z14); copy and share
+  controls rendered; waypoint action sheet includes the fallback send;
+- Library showed ten shelf items and ten starred search entries with `OPEN` and
+  the outline remove star; no crash entries throughout.
+
+### Limits
+- Kiwix is still not installed on this phone, so the `zim://`, content-provider,
+  `kiwix://` and `ACTION_SEARCH` paths could not be exercised end to end.
+- Starter shelf entries are searches, not article links. A real article needs the
+  ZIM id Kiwix reports for the downloaded file; that is deliberate.
+- Organic Maps launched into its own download-resources screen on first use. The
+  geo intent was accepted, but the final point rendering was not inspected.
+- App-level saved devices are a convenience, not evidence of identity: a MAC can
+  be randomised, and the OUI guess is explicitly a guess.
