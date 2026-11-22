@@ -346,3 +346,73 @@ do the frequency/channel arithmetic - and say in the UI why.
   and handle that prefix before the normal deep-link ladder.
 - Try `ACTION_SEARCH` first, then a plain Kiwix launch with an honest toast.
   Never claim a deep link or search works on a build you have not tested.
+
+## 24. Missing companion apps
+
+- Check both the normal and standalone package names. If neither resolves, show
+  one clear dialog: this app is an index, the companion holds the content, and
+  the user can download it now or decline. A declined dialog must leave a
+  visible no-content state and a download/check action, not a silent failure.
+- `Download` can open the official download page; returning to the screen must
+  re-check the package. If the user used that download action, opening the
+  companion once on return is a reasonable connection, but keep a manual
+  `CHECK AGAIN` path for installs done elsewhere.
+- Never render fake articles or placeholder content when the companion is
+  absent. Say plainly that there are no articles yet.
+
+## 25. GPX and waypoint relativity
+
+- Store waypoints as `name|lat|lon`; compute distance and bearing with
+  `Location.distanceBetween` from the latest fix, falling back to the map
+  crosshair. Label which origin was used; a crosshair is not a GPS fix.
+- GPX import: cap the input and point count, reject `DOCTYPE`/`ENTITY`, validate
+  lat/lon, sanitise names and deduplicate. Export with XML escaping and a normal
+  GPX 1.1 header. Use fixed app-private filenames plus the system file picker;
+  share through a provider and validate the cache filename against traversal.
+- Rebuild waypoint metrics after a map move with a debounce, not on every touch
+  event, or a small list makes panning stutter.
+
+## 26. Adding serial bridges without a HAL
+
+- Detect the chip by VID/PID and print which driver will be attempted before
+  opening. CP210x, CH340/CH341, FTDI and CDC-ACM need different vendor requests;
+  never send CDC requests to an unknown vendor interface. Refuse unknown
+  vendor-specific interfaces explicitly.
+- Vendor init sequences are best-effort and need a real board to verify. Keep the
+  claim honest in the UI and build notes.
+- For both USB and Bluetooth consoles, add line-ending choice, hex send/display,
+  timestamps, buffer copy and share. One shared text helper avoids drift between
+  the two screens.
+
+## 27. A sealed journal and peer text
+
+- Store journal entries as `timestamp|base64(text)` lines, seal the whole blob
+  with the same AES-GCM vault as the survey, and gate the tile and the activity.
+  State plainly when Android 5 has no passcode to derive a key from.
+- Keep peer text inside the existing AES-GCM packet, cap and sanitise it, and
+  never create a separate plaintext message store. Show last-seen/distance/
+  bearing alongside it, blanking them when either side has no fix.
+
+## 28. Permission drift and reference inspection
+
+- On resume, compare enabled app-level switches to real runtime grants and show
+  a banner with an Android app-settings shortcut. A self-imposed switch is not a
+  grant.
+- Reference apps: inspect manifests/workflows and cleanly re-implement patterns;
+  never paste proprietary or copyleft code into a differently licensed app.
+  Record exactly what was installed, what was only source-inspected, and what
+  could not be obtained. A missing reference app is a limitation, not a pass.
+
+## 29. USB device role and a PC that answers
+
+- `UsbManager.getDeviceList()` is a host-mode API. When the phone is plugged into
+  a PC, the phone is the device and the PC is the host, so the PC is absent by
+  design. Do not spend time trying to make it appear in that list.
+- Read the sticky `android.hardware.usb.action.USB_STATE` broadcast plus
+  `BatteryManager.EXTRA_PLUGGED` to distinguish no cable, charge-only and a data
+  link (`ADB`/`MTP`). Android does not expose the upstream host's name; say so.
+- For a PC response over USB, run a TCP server on `127.0.0.1` and document the
+  PC-side `adb forward tcp:PORT tcp:PORT` command, then any TCP client. This is
+  an ADB transport, not raw USB serial. Require USB debugging and a data cable.
+- Keep Bluetooth SPP as the no-ADB route. Never call the ADB workaround a "USB
+  serial port" or imply that Android apps can enumerate the host PC.

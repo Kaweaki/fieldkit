@@ -1,13 +1,13 @@
 # FieldKit - build and code process
 
 FieldKit (`se.blimark.fieldkit`) is a single, self-contained Android app for an
-offline phone: an 11-tile main menu, wallpapers drawn on the device, USB and
+offline phone: a 12-tile main menu, wallpapers drawn on the device, USB and
 Bluetooth tooling, survival calculators, a party-aware profile store, a passcode
 lock and a share screen. This file records how it is put together and how to
 rebuild and verify it. It contains no personal data: no names, no profiles, no
 nightly routine, no passcode.
 
-Version described here: 2.6 (versionCode 17).
+Version described here: 2.8 (versionCode 19).
 
 --------------------------------------------------------------------------------
 ## 1. Environment
@@ -24,7 +24,7 @@ Version described here: 2.6 (versionCode 17).
 1. `aapt2 compile --dir res -o build/res.zip`
 2. `aapt2 link -o build/pkg/base.apk -I android.jar --manifest
    AndroidManifest.xml --min-sdk-version 21 --target-sdk-version 34 --java
-   build/gen --version-code 17 --version-name 2.6 build/res.zip`
+   build/gen --version-code 19 --version-name 2.8 build/res.zip`
 3. `javac --release 8 -nowarn -classpath android.jar -d build/classes $(find src
    -name '*.java') $(find build/gen -name '*.java')`
 4. `d8 --lib android.jar --min-api 21 --output build/dex <all classes>`
@@ -57,7 +57,7 @@ adb shell settings put global package_verifier_enable <old value>
 
 | File | Role |
 | --- | --- |
-| `MainActivity` | 11-tile main menu, locked banner, passcode guard, pending-tile handoff |
+| `MainActivity` | 12-tile main menu, permission-drift banner, passcode guard, pending handoff |
 | `ToolsActivity` | list of the 10 calculators; `TITLES`/`SUBS` live here |
 | `ToolActivity` | the calculators and the "for everyone" party buttons |
 | `ProfileStore` | people list, flags, statuses, party maths |
@@ -85,7 +85,7 @@ adb shell settings put global package_verifier_enable <old value>
 | `ApkProvider` | `FileProvider` for handing the APK to another phone |
 | `Lock` | SHA-256 passcode, per-process unlocked flag |
 
-`AndroidManifest.xml`: 24 activities and one widget receiver, `SET_WALLPAPER`,
+`AndroidManifest.xml`: 25 activities and one widget receiver, `SET_WALLPAPER`,
 `READ`/`WRITE_EXTERNAL_STORAGE`, `usb.host`, `BLUETOOTH`, `BLUETOOTH_ADMIN`,
 `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`, `ACCESS_WIFI_STATE`,
 `CHANGE_WIFI_STATE`, `NEARBY_WIFI_DEVICES`, `ACCESS_NETWORK_STATE` and
@@ -96,12 +96,13 @@ socket; no remote address is hardcoded and no cloud is used.
 ## 3. What each part does
 
 ### Main menu
-Eleven tiles in a 3-column grid, each with a hand-drawn glyph, a title and a
+Twelve tiles in a 3-column grid, each with a hand-drawn glyph, a title and a
 one-line subtitle: Profile, Settings, Medical, Calculator, Link, Share, Screens,
-Library, Maps, Comms, Help. Medical carries a red frame. The header shows an
-optional owner name from settings and the version string. Library, Maps and
-Comms fire explicit intents at Kiwix, Organic Maps and Briar; Help opens the
-manual and never asks for the passcode; the others are internal.
+Library, Journal, Maps, Comms, Help. Medical carries a muted red frame; each tile
+has its own edge colour. The header shows an optional owner name from settings
+and the version string. Library, Maps and Comms open Kiwix, the chosen map app and
+Briar; Help opens the manual and never asks for the passcode; the others are
+internal. Journal is passcode gated exactly like Profile and Settings.
 
 ### Wallpapers
 Both wallpapers are drawn at runtime with `Canvas` and installed through
@@ -219,7 +220,7 @@ numeric GATT status, its hex code, the transport and the attempt count. `Adv`
 holds both the preference and the status wording.
 
 ### Help
-The eleventh tile opens `HelpActivity`, which never asks for the passcode: what
+The Help tile opens `HelpActivity`, which never asks for the passcode: what
 the kit is, which systems it runs on, every tile in one line, what it can do,
 what it cannot do, a plain-language error table, and a status-code table shown
 only in advanced mode.
@@ -235,7 +236,8 @@ set and the process is locked it prints "locked" instead of any stored data.
 
 ### Compatibility
 One APK, `minSdkVersion 21`, `targetSdkVersion 34`, plain framework Java: no
-AndroidX, no Play services, no `INTERNET` permission. It installs on AOSP,
+AndroidX, no Play services. `INTERNET` is declared only for the opt-in local
+peer UDP socket; no remote address is hardcoded. It installs on AOSP,
 GrapheneOS, LineageOS, OxygenOS, One UI and the rest of Android 5.0+. Calls that
 need a newer API (`connectGatt(..., TRANSPORT_LE)`, `FLAG_IMMUTABLE`) are behind
 `Build.VERSION.SDK_INT` checks. Ubuntu Touch and other non-Android Linux phones
@@ -306,7 +308,7 @@ Screenshots are captured with `adb exec-out screencap -p`.
 - Nothing runs in the background: no services, no periodic work except the
   widget's half-hour refresh; receivers are the widget update, the USB attach
   listener while Link is open, and the Bluetooth scan while the radio screen is
-  open. No internet permission.
+  open. Internet permission exists only for the opt-in local peer socket.
 - The status-133 retry and the BLE error card are compiled and installed, but no
   real BLE peripheral was available to connect to in this round; the PC link was
   verified listening, not paired to an actual computer.
@@ -554,3 +556,202 @@ and a toast if the installed build does not answer it.
   geo intent was accepted, but the final point rendering was not inspected.
 - App-level saved devices are a convenience, not evidence of identity: a MAC can
   be randomised, and the OUI guess is explicitly a guess.
+
+--------------------------------------------------------------------------------
+## 10. Version 2.7
+
+### Reference inspection
+- **OsmAnd** 5.4.11 (F-Droid version code 541103) was installed on the Galaxy A50
+  and its `net.osmand.plus.activities.MapActivity` was opened on the device. Its
+  manifest declares location, network, storage, camera, microphone and foreground
+  location/service permissions, and its map activity is the launcher and geo
+  target. The map/waypoint/GPX work here borrowed the workflow ideas (a point
+  list, a crosshair, explicit GPX import/export and a normal geo handoff), not
+  source code or resources. No OsmAnd code or assets are included in FieldKit.
+- **Serial USB Terminal** (`kai-morich/SimpleUsbTerminal`) source and manifest
+  were inspected from the upstream repository. Its useful patterns were a baud
+  selector, DTR/RTS control line panel, newline selector, hex watcher, terminal
+  buffer and a foreground USB service. FieldKit deliberately keeps its smaller
+  synchronous console and implements the same user-facing controls itself. No
+  GPL code was copied into this app.
+- **nRF Connect** could not be installed from a trusted source on this machine:
+  it is distributed through Google Play, and no Play account was available for an
+  unattended install. The BLE work therefore uses the public GATT service /
+  characteristic / notification model and the diagnostics already present in
+  FieldKit; no nRF binary was pulled or decompiled. This is a real limitation,
+  not a claim that the reference app was exercised.
+- Reverse-engineering workspace: `.tools/reference/` (outside the FieldKit
+  source tree). It contains the pulled Kiwix and OsmAnd APKs, plus the upstream
+  Serial USB Terminal source archive. These are reference artifacts only and are
+  not packaged into FieldKit.
+
+### Kiwix install prompt
+`LibraryActivity` now checks for either `org.kiwix.kiwixmobile` or
+`org.kiwix.kiwixmobile.standalone`. If neither is present it shows a one-time
+dialog: FieldKit is an index, not an archive; download Kiwix and a ZIM, return,
+and FieldKit will check again and connect. `Download Kiwix` opens the official
+Kiwix download page; `Not now` leaves a visible no-articles state and a
+`DOWNLOAD KIWIX` action. Returning after an install checks the package again;
+if the prompt's download action was used it opens Kiwix once. The Open Kiwix /
+starter / favourite paths all re-prompt when the package is missing, so they
+never silently fail. Tested with Kiwix 4.0.1 installed: Open Kiwix launched
+`KiwixMainActivity`; after `pm uninstall -k` the dialog and no-articles state
+appeared; reinstalling restored the installed state.
+
+### Map: distance, bearing and GPX
+Every waypoint row now shows distance and compass bearing from the latest GPS
+fix, or from the crosshair when no fix has arrived. The row updates after a map
+move (250 ms debounce) and is labelled `GPS` or `crosshair`, not presented as a
+measurement it cannot make. `MapView` still decodes 256 px TMS tiles
+synchronously and keeps the 128-tile cache.
+
+GPX 1.1 `<wpt>` import/export was added. Import is capped at 2 MB and 500 points,
+rejects doctypes/entities, validates latitude/longitude, sanitises names, and
+deduplicates; export writes standard `<gpx>/<wpt>/<name>` XML with escaping.
+Routes: file picker (`ACTION_OPEN_DOCUMENT` / `ACTION_CREATE_DOCUMENT`), an
+app-private/external app folder `waypoints.gpx`, and sharing the cache copy
+through the existing `FileProvider` (`ApkProvider`) with `application/gpx+xml`.
+The cache filename is fixed and checked against traversal. Verified: a GPX with
+`STATION ALPHA` at 59.3293,18.0686 imported, appeared with `4600.9 km N 14°`, and
+the shared export landed in the app folder.
+
+### BLE and serial
+`GattActivity` now requests RSSI on connect and shows service/characteristic
+counts and the signal in the connected header; payloads are still shown as
+ASCII plus hex, with the existing EXPLAIN / advanced-status split. `BtActivity`
+keeps RSSI, transport and OUI-guess labelling.
+
+`UsbActivity` recognises CP210x, CH340/CH341, FTDI and CDC-ACM, prints the driver
+it will attempt, and sends vendor init/baud/line-control requests for CP210x,
+CH340/CH341 and FTDI. Unknown vendor-specific interfaces are explicitly refused
+rather than sent CDC requests. The vendor sequences are best-effort and have not
+been hardware-tested in this round.
+
+`SppActivity` and `PcLinkActivity` gained newline / CRLF / none line endings,
+hex send and display, timestamps, session copy and session share. The same
+`SerialText` helper handles both. `UsbActivity` keeps its CDC console; USB
+line-ending controls are intentionally not duplicated there.
+
+### Encrypted journal and peer messages
+`JournalActivity` is a twelfth tile and is passcode gated in both the tile
+dispatch and `onCreate`. Entries are `timestamp|base64(text)` rows inside one
+`journal_log` preference sealed with the existing `Crypto` AES-256-GCM vault;
+adding, removing and clearing all rewrite the sealed vault. On Android 5 with no
+passcode the UI says the journal is plain. Tested: an entry survived a cold
+restart (`run-as` is unavailable on this non-debuggable build, so the at-rest
+ciphertext was not dumped).
+
+Peer packets remain `FK1` inside AES-256-GCM and now append a short (160-char,
+`|`-sanitised) text message. The peer list shows the message beside distance,
+bearing and last-seen age; a peer without a fix still shows no direction.
+`settings` / `Consent` switches are re-checked in `MainActivity.onResume` via
+`Drift`, which displays a PERMISSION DRIFT card and a shortcut to Android app
+settings; Settings has the same card. The drift card appeared for the missing
+files grant on the test phone.
+
+### Checks run
+- `./build.sh` succeeds: `built FieldKit.apk 164477 bytes` before the final
+documentation-only rebuild; signed `2.7 (18)` installed;
+- Main: 12 tiles, Journal present, PERMISSION DRIFT card, no crash;
+- Journal: entered and sealed a timestamped note, force-stopped, reopened and the
+  note was still listed;
+- Library: installed Kiwix opened; uninstalling showed the prompt and no-articles
+  state; reinstalling restored the installed card;
+- Map: added a waypoint, exported/shared GPX to the app folder, imported a GPX
+  with a new point, saw distance/bearing on every row;
+- Settings: folded sections and permission drift card render; PcLink controls
+  compile (the screen was reached but the link itself was not paired).
+- no crash entries; no background service.
+
+### Limits
+- nRF Connect was not installed, so its exact UI/GATT workflow was not observed;
+  no claim is made beyond public GATT semantics.
+- Serial USB Terminal was source-inspected, not built or installed; its USB
+  service architecture was deliberately not copied.
+- BLE, CH340/CH341 and FTDI transfers had no real peripheral in this round. The
+  vendor init sequences are compiled and labelled best-effort.
+- The peer message path had no second FieldKit phone; only the local UI/compile
+  path was exercised.
+- Journal at-rest ciphertext was not dumped because `run-as` is unavailable on
+  this build; the sealing path is the same `Crypto` used by the survey and roster.
+
+### Created / modified files
+Created: `JournalActivity.java`, `Drift.java`, `SerialText.java`.
+Modified: `MainActivity.java`, `LibraryActivity.java`, `MapActivity.java`,
+`MapView.java` (unchanged cache/contract), `GattActivity.java`, `UsbActivity.java`,
+`SppActivity.java`, `PcLinkActivity.java`, `PeerActivity.java`,
+`SettingsActivity.java`, `HelpActivity.java`, `ApkProvider.java`,
+`AndroidManifest.xml`, `build.sh`, `FIELDKIT-BUILD-PROCESS.txt`.
+
+### Build commands
+```
+cd .tools/app
+./build.sh
+# aapt2 compile/link -> javac --release 8 -> d8 -> zip classes.dex ->
+# zipalign -f -p 4 -> apksigner sign -> apksigner verify
+```
+`.pkg` is `build/pkg/base.apk` with `classes.dex` added, then aligned and signed
+as `FieldKit.apk`; the distributable copy is `Fieldkit/FieldKit-2.7.apk`.
+
+### ADB verification checklist
+```
+adb shell am force-stop se.blimark.fieldkit
+adb shell am start -n se.blimark.fieldkit/.MainActivity
+adb shell uiautomator dump /sdcard/u.xml && adb shell cat /sdcard/u.xml
+adb logcat -d -b crash | grep fieldkit
+adb shell dumpsys activity services se.blimark.fieldkit
+adb exec-out screencap -p > check.png
+```
+Check version, all 12 tiles, Journal entry/restart, Library with Kiwix both
+installed and missing, GPX import/export, Settings folds/drift, and that the
+services dump is empty and the crash buffer contains no FieldKit entry.
+
+--------------------------------------------------------------------------------
+## 11. Version 2.8 - cable truth and a PC link that answers
+
+### Why the PC was invisible
+The phone was not failing to scan. On a normal USB cable the phone is the USB
+**device** and the PC is the **host**. `UsbManager.getDeviceList()` only lists
+devices attached *below* the phone in host mode, so a connected PC cannot appear
+there. Android also exposes no public API for the USB device end to read the
+upstream host's name, descriptor or identity.
+
+`PcCable` now reads the sticky `android.hardware.usb.action.USB_STATE` broadcast
+and the battery plugged state. Link shows `USB data link active (ADB)` when
+Android reports ADB/MTP, `USB cable connected` for a charge-only connection, and
+`No USB cable` otherwise. It says plainly that the PC name is not available; it
+does not invent one. On the test phone Link showed `USB data link active (ADB)`
+and `scanned ... 0 devices cable - data link`.
+
+### PC link over the cable
+The PC Link screen now has a **CABLE / ADB LINK** section. It starts a TCP server
+on `127.0.0.1:47778` only (not on wifi) and sends a banner, echoes text, and shows
+the session in the console. On the PC:
+
+```
+adb forward tcp:47778 tcp:47778
+nc 127.0.0.1 47778          # Linux/macOS; use PuTTY/telnet on Windows
+```
+
+USB debugging must be enabled and the cable must carry data. This is an ADB
+transport over the cable, not a raw USB serial endpoint; Android does not allow
+apps to create one in device mode. Bluetooth SPP remains the no-ADB route and
+still appears as a COM port / `/dev/rfcomm`.
+
+### Verification
+- Installed signed `2.8 (19)` (168,573 bytes) over 2.7.
+- Link reported `USB data link active (ADB)` and `cable - data link` without
+  listing the PC as a USB device, which is the correct device-role behaviour.
+- Started the ADB cable link; from this PC ran `adb forward tcp:47778 tcp:47778`
+  and `printf 'hello-from-pc\nquit\n' | nc -w 3 127.0.0.1 47778`.
+- The PC received `FIELDKIT PC LINK ready`, the instructions, and
+  `FIELDKIT echo: hello-from-pc`; the app logged `ADB PC connected`.
+- No FieldKit crash entries.
+
+### Limits
+- A charge-only cable, disabled USB debugging or no `adb` on the PC will not
+  open the ADB link.
+- The cable link is ADB, not a USB CDC serial port. Android gives apps no serial
+  endpoint while the phone is the device; the ADB hop is the supported workaround.
+- The PC's name/descriptor is not exposed by Android; only cable and data
+  functions are reported.
