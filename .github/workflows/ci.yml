@@ -1,10 +1,40 @@
-name: apk-contract
+name: build-and-check
 
 on:
   push:
   pull_request:
 
 jobs:
+  java:
+    # This job is the first place the app sources are ever compiled: no JDK and
+    # no Android SDK were available where they were written.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Install the platform jar
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platforms;android-34" > /dev/null
+      - name: Compile the app against android.jar
+        run: |
+          set -euo pipefail
+          ANDROID_JAR="$ANDROID_HOME/platforms/android-34/android.jar"
+          mkdir -p build/classes
+          javac --release 8 -Xlint:-options -cp "$ANDROID_JAR" -d build/classes \
+            $(find app/src -name '*.java')
+      - name: Compile and run the self test on a plain JVM
+        run: |
+          set -euo pipefail
+          mkdir -p build/test
+          javac --release 8 -cp build/classes -d build/test \
+            $(find app/test -name '*.java')
+          java -cp build/classes:build/test se.blimark.fieldkit.SelfTest
+
   contract:
     runs-on: ubuntu-latest
     steps:
@@ -12,7 +42,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Contract checker tests
+      - name: Source and manifest tests
         run: python -m unittest discover -s tests -t . -v
       # The shipped 2.6 APK fails the contract by design; --report keeps this
       # job green until dist/FieldKit-2.7.apk replaces it. Drop --report on the

@@ -20,11 +20,24 @@ This layer exists because the 2.6 build passed every manual check on a phone
 running Android 10 while being unusable on Android 12+. A permission that is
 missing from the manifest cannot be caught by a screen test on the wrong phone.
 
-## Layer 1 — the logic, on the JVM (needs the source)
+## Layer 1 — the logic, on the JVM
 
-Every class below is pure arithmetic or string handling and needs no device.
-Move the bodies into methods that take inputs and return values, then test them
-with plain JUnit; nothing here needs Robolectric.
+`app/test/se/blimark/fieldkit/SelfTest.java` runs on any JDK and covers the
+arithmetic that 2.7 added: sunrise and sunset against known local times, bleach
+and iodine dosing, the power budget, ICE line building, the backup round trip
+and the message framing. It has no JUnit and no `android.jar` dependency, so the
+job is one `javac` and one `java`.
+
+```console
+javac --release 8 -d build/classes $(find app/src -name '*.java')
+javac --release 8 -cp build/classes -d build/test $(find app/test -name '*.java')
+java -cp build/classes:build/test se.blimark.fieldkit.SelfTest
+```
+
+The classes that touch the platform (permissions, picker, insets, torch,
+compass, SPP) compile against `android.jar` in CI but can only be exercised on a
+device — layers 2 and 3 below. The existing logic still needs the same
+treatment once the activity source is here:
 
 | Class | What to assert |
 | --- | --- |

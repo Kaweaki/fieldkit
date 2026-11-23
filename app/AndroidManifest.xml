@@ -19,6 +19,10 @@
     <!-- USB host is optional: no device is required to install the app. -->
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
+    <!-- V2: the torch is a bonus, not a requirement, and needs no permission on
+         Android 6 or later. Declared so a phone without a flash still installs. -->
+    <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
+
     <!-- V2: the legacy pair only exists on Android 11 and below. Without the
          cap, Android 12+ keeps granting them and the app never asks for the
          permissions the platform actually checks. -->

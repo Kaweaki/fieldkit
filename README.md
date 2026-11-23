@@ -23,6 +23,9 @@ This repository holds the **build and code process documentation**, the
 | [`LICENSE`](LICENSE) | MIT |
 | [`app/AndroidManifest.xml`](app/AndroidManifest.xml) | The manifest as 2.7 should read, with every change marked |
 | [`app/build.sh`](app/build.sh) | The build in one command, transcribed from the process document |
+| [`app/src/`](app/src) | The 2.7 classes: Bluetooth permission request, document picker, insets, torch and SOS, compass, water dosing, power budget, ICE card, backup, FieldKit-to-FieldKit text |
+| [`app/test/`](app/test) | `SelfTest`: plain-JVM checks for every calculation, no device needed |
+| [`docs/V2-WIRING.md`](docs/V2-WIRING.md) | Where each new class is called from, with the exact lines |
 | [`tools/apkcheck.py`](tools/apkcheck.py) | Parses an APK's binary manifest and checks the compatibility contract |
 | [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md) | What runs where, measured from the APK |
 | [`docs/TEST-PLAN.md`](docs/TEST-PLAN.md) | The four layers that would prove a release works |
