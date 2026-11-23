@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The colours are the ones in the shipped APK: amber #FFB000 on #0B0E12. -->
+    <style name="FieldKitTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:colorAccent">#FFFFB000</item>
+        <item name="android:colorPrimary">#FF0B0E12</item>
+        <item name="android:colorPrimaryDark">#FF0B0E12</item>
+        <item name="android:windowBackground">#FF0B0E12</item>
+        <item name="android:statusBarColor">#FF0B0E12</item>
+        <item name="android:navigationBarColor">#FF0B0E12</item>
+        <item name="android:textColorPrimary">#FFF2F4F7</item>
+        <item name="android:textColorHint">#FF6B7480</item>
+    </style>
+</resources>

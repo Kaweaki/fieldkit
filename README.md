@@ -153,3 +153,35 @@ platform limit; the fix is a document picker.
 MIT — see [`LICENSE`](LICENSE). Chosen so the source can be rebuilt, forked,
 translated and ported, and so F-Droid and IzzyOnDroid can carry it; swap in
 GPL-3.0 if derivatives must stay open.
+
+## FieldKit V2 (this branch)
+
+`app/v2/` is a complete, runnable app in the V1 palette: package
+`se.blimark.fieldkit.v2`, built by `app/build-v2.sh`. It exists because the
+shipped app's activity source is not in this repository, so the 2.7 classes had
+nowhere real to run. Every tile is backed by code that runs on the phone; nothing
+is a placeholder:
+
+| Tile | What it actually does |
+|---|---|
+| Profile | water for your people and days, plus the bleach or boil dose for all of it |
+| Settings | stores name, blood type, allergies, medicines, contact, home position; export and restore a plain-text backup through the system picker |
+| Medical | nine field protocols and your ICE card |
+| Calculator | bleach and iodine dosing, ORS recipe, battery hours, solar yield |
+| Link | Bluetooth serial text to a paired phone, framed by `TextLink` |
+| Share | writes the backup through `SAF`, or hands it to any app |
+| Screens | paints the ICE card onto the lock screen only (`FLAG_LOCK`) |
+| Library | counts the ZIM files it can see and opens Kiwix |
+| Journal | AES-256-GCM notes, key from PBKDF2 over your passphrase |
+| Maps | opens a picked `.mbtiles`, reads its metadata and counts tiles |
+| Comms | opens Briar if it is installed, says so if it is not |
+| Help | this phone's real capabilities, and what the build does not do |
+
+The SOS bar above the grid runs the torch in Morse, the same pattern in tone,
+a flashing panel, and a preset message built from the ICE fields that can be
+copied or shared. It needs no permission and no network.
+
+The manifest has **no INTERNET permission** and no storage permissions; the only
+runtime permission is the Bluetooth pair (scan/connect on Android 12+, location
+below it), asked from the Link tile and the home banner.
+

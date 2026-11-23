@@ -299,6 +299,9 @@ STORAGE = (
 EXPORTED_ALLOWED = {
     "se.blimark.fieldkit.MainActivity",
     "se.blimark.fieldkit.FieldKitWidget",
+    # The V2 package has one component and it is the launcher.
+    "se.blimark.fieldkit.v2.V2Activity",
+    ".V2Activity",
 }
 
 

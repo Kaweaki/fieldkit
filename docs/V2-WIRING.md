@@ -1,4 +1,9 @@
-# Wiring the 2.7 classes
+# Wiring the 2.7 classes into FieldKit
+
+The runnable reference for everything below is `app/v2/`: it calls each class
+from a real screen, and `app/build-v2.sh` builds it. Read that first when a
+wiring question comes up, because it is the version that has been run on a
+phone rather than the version that was planned.
 
 Nine small classes in `app/src/se/blimark/fieldkit/` carry the fixes and the new
 tools. They are deliberately self-contained — no `Ui`, no activity, no field of

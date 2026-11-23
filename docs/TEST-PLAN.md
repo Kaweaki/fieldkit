@@ -169,3 +169,29 @@ Kiwix leaves it out. The other 14 satisfy `checksumPos == size - 16` exactly.
 FieldKit's Library tile does not read ZIMs. It reports "Kiwix is installed. ZIM
 articles stay inside Kiwix; this list only keeps links." and offers OPEN KIWIX,
 so its compatibility depends entirely on Kiwix having the books indexed.
+
+## V2 app on the same phone: 2026-11-23
+
+`se.blimark.fieldkit.v2` 2.9 (21), built by `app/build-v2.sh`, installed beside
+the shipped 2.8 on the SM-A505F (Android 10, API 29). Every screen was opened
+through adb and read back from the accessibility tree.
+
+| Check | Result |
+|---|---|
+| Home grid, tiles, palette | renders with the V1 colours from the 2.8 APK (`#FFB000` on `#0B0E12`) |
+| Profile "work it out" | 1 person, 14 days: 42 L drinking, 105 L with washing, 18 mL of 5% bleach, 353 drops |
+| Calculator "bleach dose" | 10 L clear at 5%: 0.84 mL, 17 drops, iodine 50 drops, boil 1 minute |
+| Medical | nine protocols open; ICE card built from Settings |
+| Settings save | "Saved to this phone", eight fields |
+| Journal | sealed 11 characters, reopened with the passphrase, text returned intact |
+| Library | cannot list `/Kiwix` under scoped storage even with the legacy flag (it only applies at target 29); the folder picker opens and the screen explains the step |
+| Maps | screen opens; the picker is reachable (selection needs a human tap) |
+| Comms | found `org.briarproject.briar.android` and offers to open it |
+| Help | API 29, SM-A505F, torch available, compass present, 20147 MB free |
+| Screens + wallpaper | lock wallpaper id moved 2196 -> 2197 with `FLAG_LOCK` |
+| SOS panel | state reached SIGNALLING; camera service logged the torch turning on and off for the app's own PID in Morse timing |
+| Matched tap through the permission dialog | not exercised: One UI answers the dialog from the same tap that opens it |
+
+Not tested here: a second phone for the Link tile, the API 31+ Bluetooth split,
+the SAF folder selection (needs a human tap in DocumentsUI), and map rendering
+(which this build does not claim to do).
