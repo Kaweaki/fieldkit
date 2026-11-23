@@ -90,7 +90,9 @@ $ py tools/apkcheck.py dist/FieldKit-2.6.apk
 It parses the APK's binary manifest, without an SDK or a device, and reports
 what the build gets wrong. On 2.6 that is three failures — target API level,
 Bluetooth permissions, storage permissions — and two warnings. After 2.7 it must
-report none, and `app/build.sh` runs it before an APK counts as finished. The
+report no failures; one warning stays while the storage permissions are capped
+at API 28 and the document picker is still missing. `app/build.sh` runs it
+before an APK counts as finished. The
 reasoning behind each check is in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
 ## Build from source

@@ -368,13 +368,23 @@ def check(facts: dict) -> list[dict]:
 
     # C4 storage permissions
     if target is not None and target >= 30:
-        dead = [p for p in STORAGE if p in perms]
+        declared = [p for p in STORAGE if p in perms]
+        # Capped at API 28 they still grant access on Android 9 and below, which
+        # is where the path-based import lives; uncapped they are a lie above 28.
+        dead = [p for p in declared if perms[p] is None or perms[p] >= 29]
         if dead:
             add(
                 "C4", "FAIL", "Storage permissions",
-                f"{len(dead)} storage permission(s) declared under scoped storage "
-                f"(targetSdk {target}); they grant nothing. Import with "
-                f"ACTION_OPEN_DOCUMENT / ACTION_CREATE_DOCUMENT instead.",
+                f"{len(dead)} storage permission(s) still live above API 28 under "
+                f"scoped storage (targetSdk {target}); they grant nothing there. "
+                f"Cap them at maxSdkVersion=28 and import with ACTION_OPEN_DOCUMENT.",
+            )
+        elif declared:
+            add(
+                "C4", "WARN", "Storage permissions",
+                "capped at API 28: they work on Android 9 and below, where the MBTiles "
+                "file is opened by path. Replace the path with ACTION_OPEN_DOCUMENT and "
+                "delete them.",
             )
         else:
             add("C4", "PASS", "Storage permissions", "no storage permissions; document picker only")

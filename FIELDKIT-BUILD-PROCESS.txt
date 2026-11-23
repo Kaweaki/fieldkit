@@ -593,7 +593,9 @@ Download was refused" limit in section 7.3 is therefore an app bug: the file is
 opened by path, the platform is not refusing a grant it never needed.
 
 Fix: ACTION_OPEN_DOCUMENT, copy the stream into app storage, keep the app-folder
-path as a fallback. Drop both permissions.
+path as a fallback. Until that code lands, cap both permissions at
+maxSdkVersion=28: they still work on Android 9 and below, and above that they
+are honest no-ops instead of silent lies. Delete them with the code change.
 
 ### 10.3 The build cannot be published to Google Play
 
@@ -618,7 +620,7 @@ and IzzyOnDroid are unaffected.
 | --- | --- | --- |
 | BLUETOOTH_SCAN/CONNECT/ADVERTISE, legacy capped at 30 | manifest + runtime request | +1 KB |
 | targetSdk 36, edge-to-edge retest | build flags + layouts | none |
-| SAF import, storage permissions removed | MapActivity + manifest | -2 permissions |
+| SAF import; storage capped at 28 meanwhile | MapActivity + manifest | -2 permissions above API 28 |
 | release keystore for shipped builds | build script | none |
 | MIT licence, source published | repository | enables F-Droid, forks, ports |
 | manifest contract check in the build | tools/apkcheck.py | none |

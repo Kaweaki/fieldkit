@@ -128,10 +128,22 @@ class CorrectedManifestSatisfiesTheContract(unittest.TestCase):
         self.assertEqual(names["android.permission.BLUETOOTH"], 30)
         self.assertEqual(names["android.permission.BLUETOOTH_ADMIN"], 30)
 
-    def test_no_storage_permissions(self):
-        self.assertEqual(self.by_id["C4"]["status"], "PASS")
-        names = {p["name"] for p in self.facts["permissions"]}
-        self.assertNotIn("android.permission.WRITE_EXTERNAL_STORAGE", names)
+    def test_storage_permissions_are_capped(self):
+        # Capped at API 28 so Android 5-9 keep their path-based import, and the
+        # warning stays until the document picker replaces it.
+        self.assertEqual(self.by_id["C4"]["status"], "WARN")
+        caps = {
+            p["name"]: p["maxSdkVersion"]
+            for p in self.facts["permissions"]
+            if p["name"] in apkcheck.STORAGE
+        }
+        self.assertEqual(
+            caps,
+            {
+                "android.permission.READ_EXTERNAL_STORAGE": 28,
+                "android.permission.WRITE_EXTERNAL_STORAGE": 28,
+            },
+        )
 
     def test_same_24_activities_and_exports(self):
         activities = [c for c in self.facts["components"] if c["kind"] == "activity"]

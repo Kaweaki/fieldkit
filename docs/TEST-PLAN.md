@@ -11,8 +11,9 @@ py tools/apkcheck.py dist/FieldKit-2.6.apk
 
 On 2.6 it must report three failures (target API, Bluetooth permissions,
 storage permissions) and two warnings (minimum API, debug signing). After a 2.7
-build it must report none, and `app/build.sh` runs it automatically before an
-APK is considered finished. `py -m unittest discover -s tests -t .` proves the
+build it must report no failures; one warning stays while the storage
+permissions are capped at API 28 and the document picker is still missing.
+`app/build.sh` runs it automatically before an APK is considered finished. `py -m unittest discover -s tests -t .` proves the
 checker still catches each of those bugs.
 
 This layer exists because the 2.6 build passed every manual check on a phone

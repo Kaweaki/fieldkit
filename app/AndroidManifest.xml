@@ -54,11 +54,16 @@
     <!-- Android 13+ splits Wi-Fi scan results out of location. -->
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
 
-    <!-- V2: READ_EXTERNAL_STORAGE and WRITE_EXTERNAL_STORAGE are gone. Under
-         scoped storage (targetSdk >= 30) neither grants anything, which is why
-         the MBTiles import from Download "was refused". Import with
-         ACTION_OPEN_DOCUMENT and copy the bytes into app storage instead; the
-         document picker needs no permission on any version. -->
+    <!-- V2: storage access, capped where it still exists. From API 29 with a
+         target of 30 these grant nothing, which is why the MBTiles import from
+         Download "was refused"; on API 28 and below they still work and the app
+         reads the file by path there. Capping at 28 keeps Android 5-9 working
+         and stops the manifest claiming something it does not have. Replace the
+         path with ACTION_OPEN_DOCUMENT, then delete both lines. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
 
     <queries>
         <intent>
