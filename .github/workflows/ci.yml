@@ -1,0 +1,21 @@
+name: apk-contract
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Contract checker tests
+        run: python -m unittest discover -s tests -t . -v
+      # The shipped 2.6 APK fails the contract by design; --report keeps this
+      # job green until dist/FieldKit-2.7.apk replaces it. Drop --report on the
+      # 2.7 artefact and the build fails if the fix regresses.
+      - name: Contract report on the shipped APK
+        run: python tools/apkcheck.py dist/FieldKit-2.6.apk --report

@@ -1,0 +1,18 @@
+# Local build output
+app/build/
+build.js
+
+# Verification artefacts
+screenshots/
+*.log
+u.xml
+
+# Editor noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
