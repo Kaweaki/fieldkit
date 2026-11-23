@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A probe, not the app. It exists so the 2.7 classes can be exercised on a real
+  phone before the activity source is available: the process is separate, so
+  nothing here can affect an installed FieldKit, and its package name is
+  different on purpose.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="se.blimark.fieldkit.probe">
+
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
+
+    <application android:label="FieldKit V2 Probe">
+        <activity
+            android:name="se.blimark.fieldkit.probe.ProbeActivity"
+            android:exported="true"
+            android:label="FieldKit V2 Probe">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
