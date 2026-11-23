@@ -195,3 +195,46 @@ through adb and read back from the accessibility tree.
 Not tested here: a second phone for the Link tile, the API 31+ Bluetooth split,
 the SAF folder selection (needs a human tap in DocumentsUI), and map rendering
 (which this build does not claim to do).
+
+## Android 14 / API 34 in an emulator: 2026-11-23
+
+The phone in the table above is Android 10, so the Bluetooth permission split and
+the Android 12 splash screen had never actually run. This pass put the same APK
+on a newer system: Windows 10 host, Android Emulator 37.3.10 with the AEHD
+hypervisor driver (the emulator refuses software emulation, so the driver is not
+optional), two AVDs at API 34 - `aosp_atd` (fast, no display pipeline, so no
+screenshots) and `default` (full AOSP, screenshots and wallpaper service).
+
+| Check | Result |
+|---|---|
+| Installs and launches | `Success`, first frame drawn in 5.3 s cold (dexopt) and 2.0-2.3 s warm |
+| All twelve tiles | opened one by one, stable PID, crash buffer empty |
+| Link, permission missing | shows the Android 12 wording and an ASK FOR IT button |
+| Link, permission denied | stays on the Link screen with the same card, toast "Radio still refused.", no exception |
+| Link, permission granted | permission card gone, PAIRED PHONES list, "Nothing is paired yet" |
+| Permission requested | dialog reads "find, connect to, and determine the relative position of nearby devices" - the modern scan/connect pair, not legacy Bluetooth |
+| SOS panel | IDLE -> SIGNALLING -> IDLE, and the panel says "This phone reports no camera flash, so there is no torch to drive" |
+| Help | "ANDROID 14 (API 34)", "TORCH unavailable" - the emulator's own hardware, reported as it is |
+| Lock-screen wallpaper | system id=0 -> id=2 while a separate lock record id=3 with mWhich=2 appeared: lock screen only |
+| One ANR | on the very first launch, with two emulators competing for the CPU; not reproducible once the second one was stopped |
+
+Four defects came out of this and are fixed in the source:
+
+1. `onRequestPermissionsResult` always jumped home, so answering the dialog from
+   the Link screen threw the owner back to the grid. It now rebuilds the screen
+   the request came from.
+2. `Kit.link` drew the "Radio permission" card unconditionally, so a phone that
+   had already granted it was told to ask again. The card now only exists while
+   the permission is actually missing.
+3. On Android 12+ the system draws a splash screen from the theme and it came out
+   white in front of a black app. `values-v31/styles.xml` now sets the same
+   `#0B0E12` background and the amber mark.
+4. `app/build-v2.sh` appended `classes.dex` to a *new* `unsigned.apk` instead of a
+   copy of what aapt2 produced, so the script emitted an APK with no manifest and
+   no resources. It copies `base.apk` first now, and finds `python3`, `python` or
+   `py` on its own.
+
+Not covered by the emulator: Bluetooth actually carrying text (the emulator has
+no radio, so pairing and SPP are still unproven), the torch (no flash unit), and
+the magnetometer. The phone covers the torch; a second real phone is still the only
+way to prove the Link tile end to end.

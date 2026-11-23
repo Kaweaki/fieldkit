@@ -177,6 +177,11 @@ is a placeholder:
 | Comms | opens Briar if it is installed, says so if it is not |
 | Help | this phone's real capabilities, and what the build does not do |
 
+The build has been run on the Android 10 phone it was written for and on
+Android 14 (API 34) in an emulator, which is where the Android 12+
+Bluetooth permission split, the dark splash screen and the lock-screen
+wallpaper path were verified; `docs/TEST-PLAN.md` records both runs.
+
 The SOS bar above the grid runs the torch in Morse, the same pattern in tone,
 a flashing panel, and a preset message built from the ICE fields that can be
 copied or shared. It needs no permission and no network.

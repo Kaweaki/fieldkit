@@ -39,6 +39,9 @@ public final class V2Activity extends Activity {
     private View home;
     private View current;
 
+    /** Which tile screen is open, so a permission answer can rebuild it in place. */
+    private String openTile = "";
+
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -93,6 +96,7 @@ public final class V2Activity extends Activity {
     private void goHome() {
         // Rebuilt each time so the header, the permission card and the footer
         // reflect whatever the last screen changed.
+        openTile = "";
         home = build();
         show(home);
     }
@@ -226,6 +230,7 @@ public final class V2Activity extends Activity {
     }
 
     private void openFor(String tile) {
+        openTile = tile;
         final Runnable home = new Runnable() {
             @Override
             public void run() {
@@ -443,8 +448,19 @@ public final class V2Activity extends Activity {
     public void onRequestPermissionsResult(int request, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(request, permissions, results);
         if (request == Perms.REQ_RADIO) {
-            home = build();
-            goHome();
+            // Answer in place: on Android 12+ the request usually comes from the
+            // Link screen, and dropping the owner back to the grid loses their
+            // place and hides the answer they just gave.
+            if ("Link".equals(openTile)) {
+                open(Kit.link(this, new Runnable() {
+                    @Override
+                    public void run() {
+                        goHome();
+                    }
+                }));
+            } else {
+                goHome();
+            }
             toast(Perms.hasRadio(this) ? "Radio granted." : "Radio still refused.");
         }
     }

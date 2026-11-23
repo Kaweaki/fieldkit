@@ -50,17 +50,23 @@ javac --release 8 -Xlint:-options -classpath "$ANDROID_JAR" -d build/v2/classes 
 "$D8" --lib "$ANDROID_JAR" --min-api "$MIN_SDK" --output build/v2/dex \
     $(find build/v2/classes -name '*.class')
 
-# classes.dex enters the APK after aapt2 link and before zipalign.
-if command -v zip >/dev/null 2>&1; then
-    (cd build/v2/dex && zip -q -j ../pkg/unsigned.apk classes.dex)
-else
-    python3 - <<'PY'
+# classes.dex enters the APK after aapt2 link and before zipalign. It has to go
+# into a copy of what aapt2 produced: building a fresh archive here would drop
+# the manifest and the resources.
+cp build/v2/pkg/base.apk build/v2/pkg/unsigned.apk
+PYTHON="${PYTHON:-}"
+if [ -z "$PYTHON" ]; then
+    for candidate in python3 python py; do
+        if command -v "$candidate" >/dev/null 2>&1; then PYTHON="$candidate"; break; fi
+    done
+fi
+[ -n "$PYTHON" ] || { echo "no python found to add classes.dex to the apk" >&2; exit 2; }
+"$PYTHON" - <<'PY'
 import zipfile
 z = zipfile.ZipFile('build/v2/pkg/unsigned.apk', 'a')
 z.write('build/v2/dex/classes.dex', 'classes.dex')
 z.close()
 PY
-fi
 
 "$ZIPALIGN" -f -p 4 build/v2/pkg/unsigned.apk build/v2/pkg/aligned.apk
 

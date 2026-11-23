@@ -65,14 +65,18 @@ public final class Kit {
         LinearLayout column = Tools.screen(activity, "LINK",
                 "Short text between two paired phones, over Bluetooth serial.", back);
 
-        column.addView(Ui.caps(activity, "Radio permission", 13f, Ui.AMBER));
-        column.addView(Ui.body(activity, Perms.explain(activity)));
-        column.addView(Ui.button(activity, "ASK FOR IT", Ui.AMBER, new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Perms.ensureRadio(activity);
-            }
-        }));
+        // Only while the permission is actually missing: an "ask for it" card on a
+        // screen that already has it is the kind of lie this app must not tell.
+        if (!Perms.hasRadio(activity)) {
+            column.addView(Ui.caps(activity, "Radio permission", 13f, Ui.AMBER));
+            column.addView(Ui.body(activity, Perms.explain(activity)));
+            column.addView(Ui.button(activity, "ASK FOR IT", Ui.AMBER, new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Perms.ensureRadio(activity);
+                }
+            }));
+        }
 
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
         if (adapter == null) {

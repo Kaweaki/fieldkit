@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- From Android 12 the system draws a splash screen for every cold start, and
+         it takes its background from the theme. Left alone it came out white, which
+         put a bright flash in front of a black app. Same colour, same icon. -->
+    <style name="FieldKitTheme" parent="FieldKitBase">
+        <item name="android:windowSplashScreenBackground">#FF0B0E12</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher</item>
+    </style>
+</resources>
