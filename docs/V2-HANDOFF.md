@@ -35,9 +35,49 @@ emulator **and** the SM-A505F, empty crash buffer on both.
 - `docs/screens/{v1,v2}/` holds the paired captures taken on that one device, each
   with a `.txt` of the same screen's geometry.
 
-Verified on the emulator after the restyle: home, Profile, Settings, Link, SOS.
-Verified on the SM-A505F: the tour and SOS, **but before the restyle** — the phone
-has not seen this design yet.
+## The structure pass, and why it was needed
+
+Matching the palette was not enough, and the owner said so: the tiles were not
+"in the same place" as V1. The cause was mundane and worth writing down. The
+blueprint script that was supposed to open each V1 tile tapped `x=540`, which is
+the middle column, so Profile, Settings, Emergency and Calculator were all dumping
+the *Settings* screen and the comparison had nothing to compare. The dumps were
+redone by tapping each tile's accessibility bounds; V1's full scrollable contents
+per tile are in `app/build/v1full/*.txt`.
+
+With those in hand, the screens were rebuilt on V1's information architecture
+rather than its colours:
+
+- New shared components in `Ui`: `section(context, label, title, detail)` for
+  V1's card with a grey caps label over a white line over a grey line,
+  `row(context, left, right, listener)` for its `text ... › TAG` rows,
+  `divider`, and `toolRow` for the numbered calculator rows. `Tools.accordion`
+  and `Tools.tool` open a section in place, with V1's plus turning into a minus.
+- **Profile** is V1's form again: name, body weight, age, ten condition chips,
+  six allergy chips plus "other", regular medicines, three workload chips.
+- **Settings** is V1's folded list of thirteen sections in its own order.
+- **Emergency** is V1's `IF YOU SEE / OPEN` table with a `› TAG` on the right.
+- **Calculator** is a numbered list (01-04) of named sums that open in place.
+- **Link, Share, Screens, Library, Journal and Maps** follow V1's card order;
+  Screens now paints exactly the lines typed into its routine box, and Library is
+  Kiwix / starter shelf / on this phone / favourites.
+- The SOS bar moved below the grid, because V1 has no SOS card and the top of the
+  home screen should stay where V1 puts it.
+
+Sections V2 cannot back (USB, PC link, survey, metadata wipe, APK sharing, GPX,
+widget, app lock) keep V1's position and say so in one line. That is the rule this
+build is held to: same place, honest words.
+
+## What has been verified, and what has not
+
+Verified on `fk34ui` after the rebuild: every screen renders in V1's order, a
+condition chip lights and persists, the OWNER section opens, and all twelve tiles
+plus SOS open with an empty crash buffer and the same pid. The JVM self test is
+58 passed, 0 failed; `tools/apkcheck.py` is 6 passed, 2 warned, 0 failed.
+
+Not verified: the SM-A505F had no ADB connection during this pass, so the phone
+has still only seen the pre-restyle build. Run the tour on it before calling the
+two apps done — it is the one device that is not an emulator.
 
 ## What is left, in order
 

@@ -1,7 +1,17 @@
 ‹  FIELDKIT                              Button     x=  50- 373 y=  138-  264
 LIBRARY                                  TextView   x=  50-1030 y=  286-  397
-ZIM files on this phone. Kiwix reads the TextView   x=  50-1030 y=  397-  501
-No folder has been chosen, and this Andr TextView   x=  50-1030 y=  557-  721
-CHOOSE THE KIWIX FOLDER                  Button     x=  50- 696 y=  754-  880
-Kiwix is not installed, so nothing here  TextView   x=  50-1030 y=  880-  932
-Article counts come from each file's own TextView   x=  50-1030 y=  932- 1096
+the books on this phone, counted rather  TextView   x=  50-1030 y=  397-  501
+KIWIX                                    TextView   x=  94- 986 y=  634-  678
+Kiwix is not installed                   TextView   x=  94- 986 y=  678-  747
+Kiwix reads ZIM files. This screen only  TextView   x=  94- 986 y=  747-  855
+CHOOSE THE KIWIX FOLDER                  Button     x=  94- 740 y=  888- 1014
+Nothing here can be read until Kiwix is  TextView   x=  94- 986 y= 1014- 1066
+STARTER SHELF                            TextView   x=  94- 986 y= 1187- 1231
+Ten useful first pages                   TextView   x=  94- 986 y= 1231- 1300
+not in this build                        TextView   x=  94- 986 y= 1300- 1352
+V1 listed ten starter pages and starred  TextView   x=  94- 986 y= 1352- 1572
+ON THIS PHONE                            TextView   x=  94- 986 y= 1693- 1737
+No books found yet                       TextView   x=  94- 986 y= 1737- 1806
+Point the app at the folder once; it kee TextView   x=  94- 986 y= 1806- 1914
+This Android version will not let an app TextView   x=  94- 986 y= 1914- 2078
+FAVOURITES                               TextView   x=  94- 986 y= 2199- 2208

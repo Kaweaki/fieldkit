@@ -15,6 +15,7 @@ import java.util.Map;
 
 import se.blimark.fieldkit.Heading;
 import se.blimark.fieldkit.Ice;
+import se.blimark.fieldkit.Perms;
 import se.blimark.fieldkit.Power;
 import se.blimark.fieldkit.Sun;
 import se.blimark.fieldkit.Torch;
@@ -60,205 +61,278 @@ public final class Tools {
 
     // ---- profile -----------------------------------------------------------
 
-    public static View profile(final Activity activity, final Runnable back) {
-        LinearLayout column = screen(activity, "PROFILE", "who is here - the calculators use every person",
-                back);
+    private static final String[] CONDITIONS = {
+            "pregnant", "breastfeeding", "diabetes", "asthma", "epilepsy",
+            "heart condition", "kidney disease", "immunosuppressed", "blood thinner",
+            "mobility limit"
+    };
 
+    private static final String[] ALLERGIES = {
+            "penicillin", "sulfa drugs", "nuts", "latex", "insect stings", "food"
+    };
+
+    private static final String[] WORKLOAD = {"light", "moderate", "heavy"};
+
+    /**
+     * V1's profile: who is here, what they carry, what is wrong with them. The
+     * values feed the water and ORS sums and the ICE card, exactly as in the
+     * shipped build, so this screen is a form and not a calculator.
+     */
+    public static View profile(final Activity activity, final Runnable back) {
+        LinearLayout column = screen(activity, "PROFILE",
+                "who is here - the calculators use every person", back);
+
+        final EditText name = Ui.textField(activity, "name",
+                Store.get(activity, "owner", Store.NAME));
         final EditText weight = Ui.number(activity, "body weight, kg",
                 Store.get(activity, "weight", "75"));
-        final EditText people = Ui.number(activity, "people to supply",
-                Store.get(activity, "people", "1"));
-        final EditText days = Ui.number(activity, "days", Store.get(activity, "days", "14"));
-        LinearLayout form = Ui.card(activity);
-        form.addView(Ui.fieldBlock(activity, "Body weight, kg", weight));
-        form.addView(Ui.fieldBlock(activity, "People to supply", people));
-        form.addView(Ui.fieldBlock(activity, "Days to cover", days));
-        column.addView(form);
+        final EditText age = Ui.number(activity, "age in years",
+                Store.get(activity, "age", ""));
 
-        final TextView result = Ui.body(activity, "");
-        final TextView store = Ui.note(activity, "");
+        LinearLayout person = Ui.card(activity);
+        person.addView(Ui.fieldBlock(activity, "Name", name));
+        person.addView(Ui.fieldBlock(activity, "Body weight, kg", weight));
+        person.addView(Ui.fieldBlock(activity, "Age in years - optional", age));
+        column.addView(person);
 
-        column.addView(Ui.action(activity, "WORK IT OUT", new View.OnClickListener() {
+        final java.util.Set<String> conditions =
+                csv(Store.get(activity, "conditions", ""));
+        LinearLayout conditionCard = Ui.section(activity,
+                "conditions - tap all that apply", "", "");
+        conditionCard.addView(chipGrid(activity, CONDITIONS, conditions, "conditions"));
+        column.addView(conditionCard);
+
+        final java.util.Set<String> allergies = csv(Store.get(activity, "allergies_pick", ""));
+        final EditText otherAllergies = Ui.textField(activity, "other allergies",
+                Store.get(activity, "allergies", ""));
+        LinearLayout allergyCard = Ui.section(activity,
+                "allergies - tap all that apply", "", "");
+        allergyCard.addView(chipGrid(activity, ALLERGIES, allergies, "allergies_pick"));
+        allergyCard.addView(Ui.fieldBlock(activity, "Other allergies", otherAllergies));
+        column.addView(allergyCard);
+
+        final EditText meds = Ui.textField(activity, "medicines",
+                Store.get(activity, "meds", ""));
+        final java.util.Set<String> load = csv(Store.get(activity, "workload", "moderate"));
+        LinearLayout medCard = Ui.card(activity);
+        medCard.addView(Ui.label(activity, "regular medicines - name and where it is kept"));
+        medCard.addView(meds);
+        medCard.addView(Ui.label(activity, "usual workload"));
+        medCard.addView(chipGrid(activity, WORKLOAD, load, "workload"));
+        column.addView(medCard);
+
+        column.addView(Ui.action(activity, "SAVE THIS PROFILE", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                double kg = value(weight, 75);
-                double persons = Math.max(1, value(people, 1));
-                double span = Math.max(1, value(days, 14));
-                Store.put(activity, "weight", trim(kg));
-                Store.put(activity, "people", trim(persons));
-                Store.put(activity, "days", trim(span));
-
-                // 3 L a day is the drinking minimum most guidance settles on;
-                // 7.5 L per person covers drinking, cooking and washing hands.
-                double drinking = 3.0 * persons * span;
-                double full = 7.5 * persons * span;
-                StringBuilder out = new StringBuilder();
-                out.append(String.format("%.0f people for %.0f days%n", persons, span));
-                out.append(String.format("drinking only: %.0f L (3 L each a day)%n", drinking));
-                out.append(String.format("drinking, cooking, washing: %.0f L%n", full));
-                out.append(String.format("carry weight: %.0f kg at 1 kg a litre%n", full));
-                double body = kg * 0.035;
-                out.append(String.format("your own daily need: about %.1f L", body));
-                result.setText(out.toString());
-
-                int drops = Water.bleachDrops(5, full, true);
-                store.setText(String.format("To treat all of it with 5%% bleach: %.0f mL, "
-                        + "about %d drops, wait %d minutes after mixing.%n"
-                        + "Or boil: %d minute(s) at a rolling boil.",
-                        Water.bleachMl(5, full, true), drops, Water.settleMinutes(),
-                        Water.boilMinutes(Store.number(activity, "altitude", 0))));
+                Store.put(activity, "owner", name.getText().toString().trim());
+                Store.put(activity, "weight", trim(value(weight, 75)));
+                Store.put(activity, "age", trim(value(age, 0)));
+                Store.put(activity, "meds", meds.getText().toString().trim());
+                String other = otherAllergies.getText().toString().trim();
+                Store.put(activity, "allergies", other.length() == 0 ? join(allergies)
+                        : (allergies.isEmpty() ? other : join(allergies) + ", " + other));
+                if (load.isEmpty()) {
+                    Store.put(activity, "workload", "moderate");
+                }
+                android.widget.Toast.makeText(activity, "Saved to this phone.",
+                        android.widget.Toast.LENGTH_SHORT).show();
             }
         }));
-        column.addView(result);
-        column.addView(store);
 
-        column.addView(Ui.note(activity, "Boil time assumes ground below 2000 m. Wash the "
-                + "container before filling, let treated water stand covered, and never drink "
-                + "from a source you have not treated."));
+        column.addView(Ui.note(activity, "The weight sizes the rehydration salts; the "
+                + "workload sets the daily water figure; name, allergies and medicines build "
+                + "the ICE card that Screens paints on the lock screen. Nothing here leaves "
+                + "the phone."));
         return column;
     }
 
     // ---- settings ----------------------------------------------------------
 
+    /**
+     * V1's settings: a folded list of sections in its own order. Sections this
+     * build cannot back say so in one line rather than pretending to a switch.
+     */
     public static View settings(final Activity activity, final Runnable back,
                                 final Runnable export, final Runnable restore) {
         LinearLayout column = screen(activity, "SETTINGS",
-                "What the app knows about you. It never leaves the phone unless you export it.",
-                back);
+                "everything local, nothing leaves the phone", back);
+        column.addView(Ui.note(activity,
+                "tap a section to open it - folds instead of one long list"));
 
-        final EditText owner = Ui.textField(activity, "name", Store.get(activity, "owner",
-                Store.NAME));
-        final EditText blood = Ui.textField(activity, "blood type", Store.get(activity, "blood", ""));
-        final EditText allergies = Ui.textField(activity, "allergies",
-                Store.get(activity, "allergies", ""));
-        final EditText meds = Ui.textField(activity, "medicines",
-                Store.get(activity, "meds", ""));
+        final EditText owner = Ui.textField(activity, "name",
+                Store.get(activity, "owner", Store.NAME));
+        final EditText blood = Ui.textField(activity, "blood type",
+                Store.get(activity, "blood", ""));
         final EditText contact = Ui.textField(activity, "emergency contact",
                 Store.get(activity, "contact", ""));
-        final EditText lat = Ui.number(activity, "latitude, e.g. 57.7089",
-                Store.get(activity, "lat", ""));
-        final EditText lon = Ui.number(activity, "longitude, e.g. 11.9746",
-                Store.get(activity, "lon", ""));
-        final EditText offset = Ui.number(activity, "UTC offset in hours, e.g. 2",
-                Store.get(activity, "utc", ""));
-
-        LinearLayout identity = Ui.card(activity);
-        identity.addView(Ui.label(activity, "identity"));
-        identity.addView(Ui.fieldBlock(activity, "Name", owner));
-        identity.addView(Ui.fieldBlock(activity, "Blood type", blood));
-        identity.addView(Ui.fieldBlock(activity, "Allergies", allergies));
-        identity.addView(Ui.fieldBlock(activity, "Medicines", meds));
-        identity.addView(Ui.fieldBlock(activity, "Emergency contact", contact));
-        column.addView(identity);
-        column.addView(Ui.label(activity, "home position"));
-        column.addView(Ui.note(activity, "Typed in once so daylight times work with the "
-                + "location permission refused. Leave blank if you would rather not."));
-        column.addView(lat);
-        column.addView(lon);
-        column.addView(offset);
-
-        final TextView saved = Ui.note(activity, "");
-        column.addView(Ui.action(activity, "SAVE", new View.OnClickListener() {
+        LinearLayout ownerBody = Ui.column(activity);
+        ownerBody.addView(Ui.fieldBlock(activity, "Name", owner));
+        ownerBody.addView(Ui.fieldBlock(activity, "Blood type", blood));
+        ownerBody.addView(Ui.fieldBlock(activity, "Emergency contact", contact));
+        ownerBody.addView(Ui.action(activity, "SAVE", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Store.put(activity, "owner", owner.getText().toString());
-                Store.put(activity, "blood", blood.getText().toString());
-                Store.put(activity, "allergies", allergies.getText().toString());
-                Store.put(activity, "meds", meds.getText().toString());
-                Store.put(activity, "contact", contact.getText().toString());
-                Store.put(activity, "lat", lat.getText().toString());
-                Store.put(activity, "lon", lon.getText().toString());
-                Store.put(activity, "utc", offset.getText().toString());
-                saved.setText("Saved to this phone.");
+                Store.put(activity, "owner", owner.getText().toString().trim());
+                Store.put(activity, "blood", blood.getText().toString().trim());
+                Store.put(activity, "contact", contact.getText().toString().trim());
+                android.widget.Toast.makeText(activity, "Saved to this phone.",
+                        android.widget.Toast.LENGTH_SHORT).show();
             }
         }));
-        column.addView(saved);
+        accordion(activity, column, "OWNER", ownerBody);
 
-        column.addView(Ui.caps(activity, "Data", 13f, Ui.AMBER));
-        column.addView(Ui.button(activity, "EXPORT A BACKUP FILE", Ui.AMBER, new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                export.run();
-            }
-        }));
-        column.addView(Ui.button(activity, "RESTORE FROM A BACKUP FILE", Ui.AMBER,
+        accordion(activity, column, "PASSCODE", body(activity,
+                "There is no app lock in this build. Each journal entry is sealed on "
+                        + "its own with the passphrase you type on the Journal tile, so a "
+                        + "wrong passphrase opens nothing. This is a vault per entry, not a "
+                        + "lock on the app."));
+
+        LinearLayout permissionBody = Ui.column(activity);
+        permissionBody.addView(Ui.note(activity, Perms.hasRadio(activity)
+                ? "Radio permission: granted."
+                : Perms.explain(activity)));
+        if (!Perms.hasRadio(activity)) {
+            permissionBody.addView(Ui.action(activity, "ASK FOR IT NOW",
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            Perms.ensureRadio(activity);
+                        }
+                    }));
+        }
+        accordion(activity, column, "PERMISSIONS", permissionBody);
+
+        accordion(activity, column, "APPEARANCE", body(activity,
+                "One look, the one you are reading: amber on near-black. The shipped "
+                        + "build carried a theme switch; this one does not."));
+
+        accordion(activity, column, "ADVANCED MODE", body(activity,
+                "Not in this build. V1 used it to unhide the survey and the raw radio "
+                        + "log; neither exists here."));
+
+        accordion(activity, column, "ACTIVE SURVEY", body(activity,
+                "Not in this build. V1 scanned wifi and Bluetooth and wrote an encrypted "
+                        + "log while its screen was open. Nothing here scans in the "
+                        + "background or at all."));
+
+        accordion(activity, column, "FIELDKIT PEERS", body(activity,
+                "Not in this build. V1 offered an opt-in UDP beacon on the local subnet; "
+                        + "this app has no INTERNET permission and no socket."));
+
+        accordion(activity, column, "SAVED ENTITIES", body(activity,
+                "Nothing saved in this build. Notes live in the Journal, not in a list "
+                        + "of people and places."));
+
+        accordion(activity, column, "LOW BATTERY MODE", body(activity,
+                "Nothing to switch: this app has no background work, no service and no "
+                        + "wakelock to turn off."));
+
+        LinearLayout sharingBody = Ui.column(activity);
+        sharingBody.addView(Ui.note(activity, "The backup is your settings as plain "
+                + "text, written through the system file picker. It is a copy, not a "
+                + "secret, so keep it somewhere you would keep a note."));
+        sharingBody.addView(Ui.button(activity, "EXPORT A BACKUP FILE", Ui.AMBER,
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        export.run();
+                    }
+                }));
+        sharingBody.addView(Ui.button(activity, "RESTORE FROM A BACKUP FILE", Ui.AMBER,
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         restore.run();
                     }
                 }));
+        accordion(activity, column, "SHARING", sharingBody);
 
-        Map<String, String> values = Store.all(activity);
-        column.addView(Ui.note(activity, values.size() + " stored values. The journal is a "
-                + "separate sealed file and is not part of the backup."));
+        accordion(activity, column, "HOME-SCREEN WIDGET", body(activity,
+                "No widget in this build. V1 shipped one; this app has no widget "
+                        + "provider at all."));
+
+        accordion(activity, column, "STORED ON THE PHONE", body(activity,
+                "Settings, the sealed journal and any backup you have written sit in this "
+                        + "app's private folder. Nothing is stored anywhere else, and "
+                        + "uninstalling removes all of it."));
+
+        accordion(activity, column, "THIS INSTALL", body(activity,
+                "FieldKit 2.9 (21), package " + activity.getPackageName() + ".\n"
+                        + "Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT
+                        + "), target SDK 36.\n"
+                        + "No INTERNET permission. No storage permission. One runtime "
+                        + "permission, the Bluetooth pair, only for the Link tile."));
         return column;
     }
 
     // ---- calculator --------------------------------------------------------
 
+    /**
+     * V1's calculator is a numbered list of named sums, not a wall of fields. The
+     * four here are the ones this build can actually compute; each opens in place.
+     */
     public static View calculator(final Activity activity, final Runnable back) {
         LinearLayout column = screen(activity, "CALCULATOR",
-                "Every number below is computed here, with the units you actually carry.", back);
+                "the sums that keep coming back", back);
 
-        column.addView(Ui.label(activity, "disinfect water"));
         final EditText litres = Ui.number(activity, "litres", "10");
         final EditText percent = Ui.number(activity, "bleach strength, %", "5");
         final EditText cloudy = Ui.number(activity, "cloudy? 1 yes, 0 no", "0");
-        column.addView(Ui.fieldBlock(activity, "Litres to treat", litres));
-        column.addView(Ui.fieldBlock(activity, "Bleach strength, %", percent));
-        column.addView(Ui.fieldBlock(activity, "Cloudy water? 1 yes, 0 no", cloudy));
-
         final TextView clean = Ui.body(activity, "");
-        column.addView(Ui.action(activity, "BLEACH DOSE", new View.OnClickListener() {
+        LinearLayout waterBody = Ui.column(activity);
+        waterBody.addView(Ui.fieldBlock(activity, "Litres to treat", litres));
+        waterBody.addView(Ui.fieldBlock(activity, "Bleach strength, %", percent));
+        waterBody.addView(Ui.fieldBlock(activity, "Cloudy water? 1 yes, 0 no", cloudy));
+        waterBody.addView(Ui.action(activity, "BLEACH DOSE", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 double l = value(litres, 0);
                 double p = value(percent, 5);
                 boolean dirty = value(cloudy, 0) >= 1;
                 if (l <= 0 || p <= 0) {
-                    clean.setText("Enter litres above zero and a bleach strength.");
+                    clean.setText("Enter litres and the bleach strength.");
                     return;
                 }
-                StringBuilder out = new StringBuilder();
-                out.append(Water.doseLine(p, l, dirty)).append('\n');
-                out.append(String.format("iodine 2%%: %d drops%n", Water.iodineDrops(l, dirty)));
-                out.append(String.format("boil: %d minute(s)%n", Water.boilMinutes(
-                        Store.number(activity, "altitude", 0))));
-                if (p > 8.5) {
-                    out.append("Above 8.5% is not household bleach. Do not guess: use the "
-                            + "iodine or boiling column instead.");
-                }
-                clean.setText(out.toString());
+                clean.setText(String.format(
+                        "%.2f mL of %.0f%% bleach, about %d drops, wait %d minutes.",
+                        Water.bleachMl(p, l, !dirty) * (dirty ? 2 : 1),
+                        p, Water.bleachDrops(p, l, !dirty) * (dirty ? 2 : 1),
+                        Water.settleMinutes() * (dirty ? 2 : 1)));
             }
         }));
-        column.addView(clean);
+        waterBody.addView(clean);
+        tool(activity, column, "01", "Chlorinate water", "bleach drops per litre", waterBody);
 
-        column.addView(Ui.caps(activity, "Rehydration drink", 13f, Ui.AMBER));
+        final EditText orsWeight = Ui.number(activity, "body weight, kg",
+                Store.get(activity, "weight", "75"));
         final TextView ors = Ui.body(activity, "");
-        column.addView(Ui.action(activity, "ORS FOR 1 LITRE", new View.OnClickListener() {
+        LinearLayout orsBody = Ui.column(activity);
+        orsBody.addView(Ui.fieldBlock(activity, "Body weight, kg", orsWeight));
+        orsBody.addView(Ui.action(activity, "ORS FOR 1 LITRE", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ors.setText("1 litre of treated water\n6 level teaspoons of sugar\n"
-                        + "half a teaspoon of salt\nStir until dissolved. Sip, do not gulp. "
-                        + "If it tastes like tears, it is right. Too salty is dangerous for "
-                        + "children: use 4 teaspoons of sugar and a quarter teaspoon of salt "
-                        + "under five years old.");
+                double kg = value(orsWeight, 75);
+                ors.setText(String.format("1 L water, %.1f g salt (about %.0f level "
+                        + "teaspoons), %.0f g sugar (about %.0f teaspoons). Sip every few "
+                        + "minutes.", 0.75 * kg / 20, 0.75 * kg / 20 / 5, 6 * kg / 20,
+                        6 * kg / 20 / 4));
             }
         }));
-        column.addView(ors);
+        orsBody.addView(ors);
+        tool(activity, column, "02", "Rehydration salts",
+                "WHO ORS, scaled to body weight", orsBody);
 
-        column.addView(Ui.label(activity, "power"));
         final EditText mah = Ui.number(activity, "battery, mAh", "10000");
         final EditText draw = Ui.number(activity, "draw, mA", "500");
         final EditText panel = Ui.number(activity, "solar panel, W", "20");
         final EditText sunHours = Ui.number(activity, "peak sun hours a day", "4");
-        column.addView(Ui.fieldBlock(activity, "Battery, mAh", mah));
-        column.addView(Ui.fieldBlock(activity, "Draw, mA", draw));
-        column.addView(Ui.fieldBlock(activity, "Solar panel, W", panel));
-        column.addView(Ui.fieldBlock(activity, "Peak sun hours a day", sunHours));
         final TextView powerOut = Ui.body(activity, "");
-        column.addView(Ui.action(activity, "POWER BUDGET", new View.OnClickListener() {
+        LinearLayout powerBody = Ui.column(activity);
+        powerBody.addView(Ui.fieldBlock(activity, "Battery, mAh", mah));
+        powerBody.addView(Ui.fieldBlock(activity, "Draw, mA", draw));
+        powerBody.addView(Ui.fieldBlock(activity, "Solar panel, W", panel));
+        powerBody.addView(Ui.fieldBlock(activity, "Peak sun hours a day", sunHours));
+        powerBody.addView(Ui.action(activity, "POWER BUDGET", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 double capacity = value(mah, 0);
@@ -280,13 +354,305 @@ public final class Tools {
                 powerOut.setText(out.length() == 0 ? "Enter a capacity and a draw." : out.toString());
             }
         }));
-        column.addView(powerOut);
-        problem(column, "16.5 Wh is about one full phone charge, so a 20 W panel in four hours "
-                + "of sun is roughly two charges a day.");
+        powerBody.addView(powerOut);
+        tool(activity, column, "03", "Solar sizing",
+                "panel watts and battery amp-hours", powerBody);
+
+        final EditText people = Ui.number(activity, "people",
+                Store.get(activity, "people", "1"));
+        final EditText days = Ui.number(activity, "days", Store.get(activity, "days", "14"));
+        final TextView daily = Ui.body(activity, "");
+        LinearLayout dailyBody = Ui.column(activity);
+        dailyBody.addView(Ui.fieldBlock(activity, "People to supply", people));
+        dailyBody.addView(Ui.fieldBlock(activity, "Days to cover", days));
+        dailyBody.addView(Ui.action(activity, "WORK OUT THE WATER", new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                double persons = Math.max(1, value(people, 1));
+                double span = Math.max(1, value(days, 14));
+                Store.put(activity, "people", trim(persons));
+                Store.put(activity, "days", trim(span));
+                double perPerson = 3.0;
+                String load = Store.get(activity, "workload", "moderate");
+                if ("moderate".equals(load)) {
+                    perPerson = 4.0;
+                } else if ("heavy".equals(load)) {
+                    perPerson = 5.0;
+                }
+                double drinking = perPerson * persons * span;
+                StringBuilder out = new StringBuilder();
+                out.append(String.format("%.0f L to drink over %.0f days for %.0f people "
+                        + "at %.0f L each a day (%s workload).", drinking, span, persons,
+                        perPerson, load));
+                out.append('\n');
+                out.append(String.format("About %.0f kg to carry, and %.0f mL of 5%% bleach "
+                        + "to treat it all.", drinking,
+                        Water.bleachMl(5, drinking, true)));
+                daily.setText(out.toString());
+            }
+        }));
+        dailyBody.addView(daily);
+        tool(activity, column, "04", "Daily water need",
+                "litres per day, by profile", dailyBody);
+
+        column.addView(Ui.note(activity, "The shipped build carried ten tools. These four "
+                + "are the ones whose arithmetic this app can do without a map, a radio or "
+                + "a library, and each one works out its number on the spot."));
         return column;
     }
 
     // ---- medical -----------------------------------------------------------
+
+    /** What a person says, and what it means: V1's two-column emergency list. */
+    private static final String[][] SYMPTOMS = {
+            {"Bleeding that will not stop", "BLEEDING"},
+            {"Not breathing, no pulse", "CPR"},
+            {"Blue lips, cannot speak", "CHOKING"},
+            {"Burn or scalded skin", "BURNS"},
+            {"Cold, confused, shivering stopped", "HYPOTHERMIA"},
+            {"Hot skin, confusion, no sweat", "HEAT STROKE"},
+            {"Limb bent the wrong way", "FRACTURE"},
+            {"Sunken eyes, dark urine", "DEHYDRATION"},
+            {"Fever with stiff neck or rash", "FEVER"}
+    };
+
+    public static View medical(final Activity activity, final Runnable back) {
+        LinearLayout column = screen(activity, "EMERGENCY",
+                "find the line that matches, tap it, read it", "ALL TOOLS", back);
+
+        LinearLayout list = Ui.card(activity);
+        LinearLayout header = Ui.row(activity, "IF YOU SEE", "OPEN", null);
+        list.addView(header);
+        list.addView(Ui.divider(activity));
+        for (int i = 0; i < PROTOCOLS.length; i++) {
+            final String body = PROTOCOLS[i][1];
+            final String[] symptom = SYMPTOMS[Math.min(i, SYMPTOMS.length - 1)];
+            final LinearLayout row = Ui.row(activity, symptom[0], "\u203a " + symptom[1], null);
+            final TextView text = Ui.body(activity, "");
+            final LinearLayout holder = Ui.column(activity);
+            holder.addView(text);
+            holder.setVisibility(View.GONE);
+            row.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    boolean open = holder.getVisibility() == View.VISIBLE;
+                    text.setText(body);
+                    holder.setVisibility(open ? View.GONE : View.VISIBLE);
+                }
+            });
+            list.addView(row);
+            list.addView(holder);
+            if (i < PROTOCOLS.length - 1) {
+                list.addView(Ui.divider(activity));
+            }
+        }
+        column.addView(list);
+
+        String conditions = Store.get(activity, "conditions", "");
+        if (conditions.length() > 0) {
+            column.addView(Ui.section(activity, "on file", "Conditions", conditions));
+        }
+
+        LinearLayout ice = Ui.section(activity, "ice card",
+                "What a stranger needs in ten seconds", "");
+        String[] lines = Ice.lines(Store.get(activity, "owner", ""),
+                Store.get(activity, "blood", ""), Store.get(activity, "allergies", ""),
+                Store.get(activity, "meds", ""), Store.get(activity, "contact", ""));
+        ice.addView(Ui.body(activity, lines.length == 0
+                ? "Nothing filled in yet. Profile and Settings hold the fields."
+                : Ice.summary(lines)));
+        ice.addView(Ui.action(activity, "PUT THIS ON THE LOCK SCREEN",
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Kit.wallpaper(activity);
+                    }
+                }));
+        column.addView(ice);
+
+        problem(column, PROTOCOLS.length + " protocols here, and the long forms are in the "
+                + "medical ZIMs in Library. This is first aid, not diagnosis.");
+        return column;
+    }
+
+    // ---- help --------------------------------------------------------------
+
+    public static View help(final Activity activity, final Runnable back) {
+        LinearLayout column = screen(activity, "HELP",
+                "what this kit does, in plain words", back);
+
+        StatFs stat = new StatFs(Environment.getDataDirectory().getPath());
+        long freeBytes = (long) stat.getAvailableBlocks() * stat.getBlockSize();
+        String compass;
+        Heading probe = Heading.start(activity, new Heading.Listener() {
+            @Override
+            public void onHeading(float degrees, String point, float accuracy) {
+            }
+        });
+        if (probe == null) {
+            compass = "no rotation vector, compass unavailable";
+        } else {
+            probe.stop();
+            compass = "present";
+        }
+
+        LinearLayout device = Ui.section(activity, "this device",
+                "Checked just now, not promised", "");
+        device.addView(Ui.stat(activity, "android", Build.VERSION.RELEASE
+                + " (API " + Build.VERSION.SDK_INT + ")"));
+        device.addView(Ui.stat(activity, "model", Build.MANUFACTURER + " " + Build.MODEL));
+        device.addView(Ui.stat(activity, "torch", Torch.supported(activity)
+                ? "works, no permission" : "unavailable"));
+        device.addView(Ui.stat(activity, "compass", compass));
+        device.addView(Ui.stat(activity, "free storage", (freeBytes / (1024 * 1024)) + " MB"));
+        if (!Torch.supported(activity)) {
+            device.addView(Ui.note(activity, Torch.unavailable(activity)));
+        }
+        column.addView(device);
+
+        LinearLayout does = Ui.section(activity, "what this is",
+                "An index and a set of sums, not a library", "");
+        does.addView(Ui.body(activity,
+                "Profile records who is here and computes nothing by itself.\n"
+                        + "Settings stores your details and exports a plain backup.\n"
+                        + "Emergency is nine protocols and your ICE card.\n"
+                        + "Calculator works out water, ORS, power and daily need.\n"
+                        + "Link sends a Bluetooth message to a paired phone.\n"
+                        + "Share writes the backup through the system picker.\n"
+                        + "Screens paints the ICE card on the lock screen.\n"
+                        + "Library counts the ZIM files on this phone and opens Kiwix.\n"
+                        + "Journal seals a note with AES-256-GCM under your passphrase.\n"
+                        + "Maps inspects an .mbtiles file you pick.\n"
+                        + "Comms opens Briar if it is installed."));
+        column.addView(does);
+
+        LinearLayout not = Ui.section(activity, "what this build does not do",
+                "Said plainly, so nothing is discovered the hard way", "");
+        not.addView(Ui.body(activity,
+                "It cannot draw map tiles - Maps reads the file, it does not render it.\n"
+                        + "It does not read ZIM articles: Kiwix owns those.\n"
+                        + "No USB, no PC link and no radio survey; Link is Bluetooth only.\n"
+                        + "No widget, no app lock and no background scan.\n"
+                        + "No tile sends anything to a network: there is no INTERNET "
+                        + "permission in this app at all.\n"
+                        + "Nothing here replaces training or a hospital."));
+        column.addView(not);
+        return column;
+    }
+
+    // ---- shared structure --------------------------------------------------
+
+    /** A settings section that opens in place, with V1's plus and minus. */
+    static void accordion(final Activity activity, LinearLayout column, String title,
+                          View body) {
+        final LinearLayout card = Ui.card(activity);
+        final LinearLayout head = new LinearLayout(activity);
+        head.setOrientation(LinearLayout.HORIZONTAL);
+        head.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        head.setPadding(0, Ui.dp(activity, 18), 0, Ui.dp(activity, 18));
+        TextView name = Ui.caps(activity, title, 13f, Ui.TEXT);
+        name.setLetterSpacing(0.08f);
+        name.setLayoutParams(new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        head.addView(name);
+        head.addView(Ui.caps(activity, "+", 15f, Ui.AMBER));
+        card.addView(head);
+        body.setVisibility(View.GONE);
+        card.addView(body);
+        head.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean open = body.getVisibility() == View.VISIBLE;
+                body.setVisibility(open ? View.GONE : View.VISIBLE);
+                ((TextView) head.getChildAt(1)).setText(open ? "+" : "\u2013");
+            }
+        });
+        column.addView(card);
+    }
+
+    /** A numbered calculator row that opens its fields in place. */
+    static void tool(final Activity activity, LinearLayout column, String number,
+                     String name, String detail, View body) {
+        final LinearLayout card = Ui.card(activity);
+        card.addView(Ui.toolRow(activity, number, name, detail, null));
+        body.setVisibility(View.GONE);
+        card.addView(body);
+        card.getChildAt(0).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                body.setVisibility(body.getVisibility() == View.VISIBLE
+                        ? View.GONE : View.VISIBLE);
+            }
+        });
+        column.addView(card);
+    }
+
+    static View body(Activity activity, String text) {
+        LinearLayout holder = Ui.column(activity);
+        holder.addView(Ui.note(activity, text));
+        return holder;
+    }
+
+    /** Two chips per row, V1's toggle shape, saved the moment they are tapped. */
+    static View chipGrid(final Activity activity, final String[] labels,
+                         final java.util.Set<String> chosen, final String key) {
+        android.widget.GridLayout grid = new android.widget.GridLayout(activity);
+        grid.setColumnCount(2);
+        for (int i = 0; i < labels.length; i++) {
+            final String label = labels[i];
+            final TextView chip = Ui.chip(activity, label, chosen.contains(label), null);
+            chip.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (chosen.contains(label)) {
+                        chosen.remove(label);
+                    } else {
+                        chosen.add(label);
+                    }
+                    boolean on = chosen.contains(label);
+                    chip.setTextColor(on ? Ui.BG : Ui.TEXT);
+                    chip.setBackground(Ui.roundRect(on ? Ui.AMBER : Ui.CHIP,
+                            on ? Ui.AMBER : Ui.BORDER, 24, activity));
+                    Store.put(activity, key, join(chosen));
+                }
+            });
+            android.widget.GridLayout.LayoutParams params =
+                    new android.widget.GridLayout.LayoutParams();
+            params.width = 0;
+            params.height = Ui.dp(activity, 48);
+            params.columnSpec = android.widget.GridLayout.spec(
+                    android.widget.GridLayout.UNDEFINED, 1f);
+            params.setMargins(i % 2 == 0 ? 0 : Ui.dp(activity, 8), Ui.dp(activity, 8), 0, 0);
+            chip.setLayoutParams(params);
+            grid.addView(chip);
+        }
+        return grid;
+    }
+
+    static java.util.Set<String> csv(String raw) {
+        java.util.Set<String> out = new java.util.LinkedHashSet<String>();
+        if (raw == null) {
+            return out;
+        }
+        for (String part : raw.split(",")) {
+            String clean = part.trim();
+            if (clean.length() > 0) {
+                out.add(clean);
+            }
+        }
+        return out;
+    }
+
+    static String join(java.util.Set<String> values) {
+        StringBuilder out = new StringBuilder();
+        for (String value : values) {
+            if (out.length() > 0) {
+                out.append(", ");
+            }
+            out.append(value);
+        }
+        return out.toString();
+    }
 
     private static final String[][] PROTOCOLS = {
             {"Severe bleeding", "Press hard on the wound with cloth and keep pressing for ten "
@@ -331,100 +697,6 @@ public final class Tools {
                     + "Write down the temperature and the times - the pattern is what a "
                     + "clinician will ask for."}
     };
-
-    public static View medical(final Activity activity, final Runnable back) {
-        LinearLayout column = screen(activity, "EMERGENCY", "find the line that matches, tap it, read it",
-                "ALL TOOLS", back);
-
-        final TextView body = Ui.body(activity, "");
-        body.setPadding(0, Ui.dp(activity, 12), 0, Ui.dp(activity, 8));
-
-        for (final String[] protocol : PROTOCOLS) {
-            column.addView(Ui.button(activity, protocol[0], Ui.RED, new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    body.setText(protocol[1]);
-                }
-            }));
-        }
-        column.addView(body);
-
-        int protocols = PROTOCOLS.length;
-        column.addView(Ui.caps(activity, "ICE card", 13f, Ui.AMBER));
-        String[] lines = Ice.lines(Store.get(activity, "owner", ""),
-                Store.get(activity, "blood", ""), Store.get(activity, "allergies", ""),
-                Store.get(activity, "meds", ""), Store.get(activity, "contact", ""));
-        column.addView(Ui.body(activity, lines.length == 0
-                ? "Nothing filled in yet. Settings holds the fields."
-                : Ice.summary(lines)));
-        column.addView(Ui.action(activity, "PUT THIS ON THE LOCK SCREEN",
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        Kit.wallpaper(activity);
-                    }
-                }));
-        problem(column, protocols + " protocols here, and the full texts are the medical ZIMs "
-                + "in Library. This is first aid, not diagnosis.");
-        return column;
-    }
-
-    // ---- help --------------------------------------------------------------
-
-    public static View help(final Activity activity, final Runnable back) {
-        LinearLayout column = screen(activity, "HELP",
-                "What this phone can actually do, checked just now rather than promised.", back);
-
-        StatFs stat = new StatFs(Environment.getDataDirectory().getPath());
-        long freeBytes = (long) stat.getAvailableBlocks() * stat.getBlockSize();
-        String compass;
-        Heading probe = Heading.start(activity, new Heading.Listener() {
-            @Override
-            public void onHeading(float degrees, String point, float accuracy) {
-            }
-        });
-        if (probe == null) {
-            compass = "no rotation vector, compass unavailable";
-        } else {
-            probe.stop();
-            compass = "present";
-        }
-
-        column.addView(Ui.caps(activity, "This device", 13f, Ui.AMBER));
-        column.addView(Ui.stat(activity, "android", Build.VERSION.RELEASE
-                + " (API " + Build.VERSION.SDK_INT + ")"));
-        column.addView(Ui.stat(activity, "model", Build.MANUFACTURER + " " + Build.MODEL));
-        column.addView(Ui.stat(activity, "torch", Torch.supported(activity)
-                ? "works, no permission" : "unavailable"));
-        column.addView(Ui.stat(activity, "compass", compass));
-        column.addView(Ui.stat(activity, "free storage", (freeBytes / (1024 * 1024)) + " MB"));
-        if (!Torch.supported(activity)) {
-            column.addView(Ui.note(activity, Torch.unavailable(activity)));
-        }
-
-        column.addView(Ui.caps(activity, "What each tile really does", 13f, Ui.AMBER));
-        column.addView(Ui.body(activity,
-                "Profile computes water for your people and days.\n"
-                        + "Settings stores your details and exports them as a plain file.\n"
-                        + "Medical is nine protocols and your ICE card.\n"
-                        + "Calculator does water, ORS and power arithmetic.\n"
-                        + "Link sends a real Bluetooth message to a paired phone.\n"
-                        + "Share writes the backup through the system file picker.\n"
-                        + "Screens paints the ICE card onto the wallpaper.\n"
-                        + "Library lists the ZIM files on this phone and opens them in Kiwix.\n"
-                        + "Journal seals notes with AES-256-GCM under your passphrase.\n"
-                        + "Maps inspects an .mbtiles file you pick and reports what is inside.\n"
-                        + "Comms opens Briar if it is installed, and says so if it is not."));
-
-        column.addView(Ui.caps(activity, "What this build does not do", 13f, Ui.RED));
-        column.addView(Ui.body(activity,
-                "It cannot render map tiles - Maps checks the file, it does not draw it.\n"
-                        + "It does not read ZIM articles: Kiwix owns those.\n"
-                        + "No tile sends anything to a network. There is no INTERNET permission "
-                        + "in this app at all.\n"
-                        + "Nothing here is a substitute for training or for a hospital."));
-        return column;
-    }
 
     // ---- shared bits -------------------------------------------------------
 

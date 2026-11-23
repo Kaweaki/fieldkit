@@ -1,12 +1,16 @@
 ‹  FIELDKIT                              Button     x=  50- 373 y=  138-  264
 FIELD JOURNAL                            TextView   x=  50-1030 y=  286-  397
-Notes sealed with AES-256-GCM. Wrong pas TextView   x=  50-1030 y=  397-  501
-PASSPHRASE                               TextView   x=  94- 986 y=  668-  712
-passphrase                               EditText   x=  94- 986 y=  729-  854
-WHAT HAPPENED, WHAT WORKED               TextView   x=  94- 986 y=  888-  932
-what happened, what worked               EditText   x=  94- 986 y=  949- 1230
-No journal yet.                          TextView   x=  50-1030 y= 1274- 1326
-SEAL AND SAVE                            Button     x=  50- 469 y= 1359- 1485
-OPEN THE JOURNAL                         Button     x=  50- 552 y= 1518- 1644
-DELETE THE JOURNAL                       Button     x=  50- 591 y= 1677- 1803
-The key is stretched from your passphras TextView   x=  50-1030 y= 1803- 2023
+notes sealed with AES-256-GCM - wrong pa TextView   x=  50-1030 y=  397-  501
+NEW ENTRY                                TextView   x=  94- 986 y=  634-  678
+One entry, one sealed card               TextView   x=  94- 986 y=  678-  747
+The passphrase stays in your head.       TextView   x=  94- 986 y=  747-  799
+PASSPHRASE                               TextView   x=  94- 986 y=  833-  877
+passphrase                               EditText   x=  94- 986 y=  894- 1019
+WHAT HAPPENED, WHAT WORKED               TextView   x=  94- 986 y= 1053- 1097
+what happened, what worked               EditText   x=  94- 986 y= 1114- 1395
+SEAL AND ADD                             Button     x=  94- 491 y= 1428- 1554
+No journal yet.                          TextView   x=  50-1030 y= 1598- 1650
+WHAT IS STORED                           TextView   x=  94- 986 y= 1727- 1771
+The sealed file, opened with the same pa TextView   x=  94- 986 y= 1771- 1894
+OPEN THE JOURNAL                         Button     x=  94- 596 y= 1927- 2053
+CLEAR THE WHOLE JOURNAL                  Button     x=  94- 765 y= 2086- 2208

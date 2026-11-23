@@ -246,6 +246,80 @@ public final class Ui {
         return edit;
     }
 
+    /**
+     * V1's card: a grey caps label, one white line, one grey line, then controls.
+     * Every section in the shipped app is this shape, so every section here is too.
+     */
+    public static LinearLayout section(Context context, String label, String title, String detail) {
+        LinearLayout card = card(context);
+        if (label != null && label.length() > 0) {
+            card.addView(caps(context, label, 12f, MUTED));
+        }
+        if (title != null && title.length() > 0) {
+            TextView head = text(context, title, 17f, TEXT);
+            head.setPadding(0, dp(context, 2), 0, 0);
+            card.addView(head);
+        }
+        if (detail != null && detail.length() > 0) {
+            card.addView(note(context, detail));
+        }
+        return card;
+    }
+
+    /** V1's list row: a line on the left, a caps tag on the right. */
+    public static LinearLayout row(Context context, String left, String right,
+                                   View.OnClickListener listener) {
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(context, 14), 0, dp(context, 14));
+        TextView name = text(context, left, 15f, TEXT);
+        name.setLayoutParams(new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        row.addView(name);
+        if (right != null && right.length() > 0) {
+            row.addView(caps(context, right, 12f, AMBER));
+        }
+        if (listener != null) {
+            row.setOnClickListener(listener);
+        }
+        return row;
+    }
+
+    /** The hairline V1 draws between list rows. */
+    public static View divider(Context context) {
+        View line = new View(context);
+        line.setBackgroundColor(0xFF1E242C);
+        line.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(context, 1)));
+        return line;
+    }
+
+    /** V1's numbered tool row: 01, the name, the detail, and a chevron. */
+    public static LinearLayout toolRow(Context context, String number, String name,
+                                       String detail, View.OnClickListener listener) {
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(context, 14), 0, dp(context, 14));
+        TextView index = caps(context, number, 13f, MUTED);
+        index.setLayoutParams(new LinearLayout.LayoutParams(dp(context, 34),
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        row.addView(index);
+        LinearLayout words = new LinearLayout(context);
+        words.setOrientation(LinearLayout.VERTICAL);
+        words.setLayoutParams(new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        words.addView(text(context, name, 15f, TEXT));
+        if (detail != null && detail.length() > 0) {
+            words.addView(text(context, detail, 13f, MUTED));
+        }
+        row.addView(words);
+        row.addView(caps(context, "\u203a", 15f, AMBER));
+        row.setOnClickListener(listener);
+        return row;
+    }
+
     /** A label above a field, the way V1 labels every box it draws. */
     public static LinearLayout fieldBlock(Context context, String label, EditText edit) {
         LinearLayout block = new LinearLayout(context);

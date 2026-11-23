@@ -1,10 +1,17 @@
 ‹  FIELDKIT                              Button     x=  50- 373 y=  138-  264
 SHARE                                    TextView   x=  50-1030 y=  286-  397
-Hand the app's own data to another phone TextView   x=  50-1030 y=  397-  501
-BACKUP CONTENTS                          TextView   x=  50-1030 y=  557-  605
-FIELDKIT-BACKUP 1&#10;                   TextView   x=  50-1030 y=  605-  720
-1 lines, 18 characters. Plain text: it i TextView   x=  50-1030 y=  720-  828
-SAVE AS A FILE                           Button     x=  50- 462 y=  861-  987
-SEND IT ANYWHERE                         Button     x=  50- 546 y= 1020- 1146
-RESTORE FROM A FILE                      Button     x=  50- 597 y= 1179- 1305
-A restore replaces every stored value. T TextView   x=  50-1030 y= 1305- 1413
+hand it on by your hand, or not at all   TextView   x=  50-1030 y=  397-  453
+THE WHOLE APP                            TextView   x=  94- 986 y=  586-  630
+Pass FieldKit on as a file               TextView   x=  94- 986 y=  630-  699
+not in this build                        TextView   x=  94- 986 y=  699-  751
+The shipped app could write its own APK  TextView   x=  94- 986 y=  751-  971
+YOUR DATA                                TextView   x=  94- 986 y= 1092- 1136
+Settings as one plain file               TextView   x=  94- 986 y= 1136- 1205
+not a secret - keep it like a note       TextView   x=  94- 986 y= 1205- 1257
+FIELDKIT-BACKUP 1&#10;                   TextView   x=  94- 986 y= 1257- 1372
+1 lines, 18 characters. Plain text: it i TextView   x=  94- 986 y= 1372- 1480
+SAVE AS A FILE                           Button     x=  94- 506 y= 1513- 1639
+SEND IT ANYWHERE                         Button     x=  94- 590 y= 1672- 1798
+RESTORE FROM A FILE                      Button     x=  94- 641 y= 1831- 1957
+A restore replaces every stored value. T TextView   x=  94- 986 y= 1957- 2065
+METADATA - BEFORE IT LEAVES              TextView   x=  94- 986 y= 2186- 2208

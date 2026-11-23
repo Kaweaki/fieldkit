@@ -121,10 +121,12 @@ public final class V2Activity extends Activity {
         column.addView(Ui.text(this, "offline index + tools - tap a tile", 15f, Ui.MUTED));
         column.addView(Ui.rule(this));
 
+        column.addView(tileGrid());
+
+        // V1 has no SOS bar: it goes under the grid so the top of the screen
+        // stays exactly where the shipped app puts it.
         column.addView(sosBar());
         column.addView(permissionCard());
-
-        column.addView(tileGrid());
         column.addView(footer());
         return column;
     }

@@ -1,7 +1,18 @@
 ‹  FIELDKIT                              Button     x=  50- 373 y=  138-  264
 LINK                                     TextView   x=  50-1030 y=  286-  397
-Short text between two paired phones, ov TextView   x=  50-1030 y=  397-  501
-RADIO PERMISSION                         TextView   x=  50-1030 y=  563-  607
-Android 12 and later ask for Nearby devi TextView   x=  50-1030 y=  607-  781
-ASK FOR IT                               Button     x=  50- 379 y=  814-  940
-Android 12 and later ask for Nearby devi TextView   x=  50-1030 y=  940- 1104
+what is plugged in, what is in the air   TextView   x=  50-1030 y=  397-  453
+USB - OTG                                TextView   x=  94- 986 y=  586-  630
+Identify and talk to what is on the cabl TextView   x=  94- 986 y=  630-  699
+No USB cable                             TextView   x=  94- 986 y=  699-  751
+USB host is not in this build. The shipp TextView   x=  94- 986 y=  751-  915
+THIS PC                                  TextView   x=  94- 986 y= 1036- 1080
+Open a link a computer can use           TextView   x=  94- 986 y= 1080- 1149
+not in this build                        TextView   x=  94- 986 y= 1149- 1201
+The shipped app offered an ADB loopback  TextView   x=  94- 986 y= 1201- 1365
+BLUETOOTH                                TextView   x=  94- 986 y= 1486- 1530
+Scan, read services, send commands       TextView   x=  94- 986 y= 1530- 1599
+Classic serial, no internet needed       TextView   x=  94- 986 y= 1599- 1651
+Android 12 and later ask for Nearby devi TextView   x=  94- 986 y= 1651- 1815
+ASK FOR IT                               Button     x=  94- 423 y= 1848- 1974
+SURVEY - ACTIVE SCAN                     TextView   x=  94- 986 y= 2095- 2139
+Wifi and bluetooth intel, on demand      TextView   x=  94- 986 y= 2139- 2208

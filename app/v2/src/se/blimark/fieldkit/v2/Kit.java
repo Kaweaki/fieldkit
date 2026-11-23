@@ -63,75 +63,75 @@ public final class Kit {
 
     public static View link(final Activity activity, final Runnable back) {
         LinearLayout column = Tools.screen(activity, "LINK",
-                "Short text between two paired phones, over Bluetooth serial.", back);
+                "what is plugged in, what is in the air", back);
 
-        // Only while the permission is actually missing: an "ask for it" card on a
-        // screen that already has it is the kind of lie this app must not tell.
+        LinearLayout usb = Ui.section(activity, "usb - otg",
+                "Identify and talk to what is on the cable", "No USB cable");
+        usb.addView(Ui.note(activity, "USB host is not in this build. The shipped app read "
+                + "boards and serial bridges on an OTG cable; this app has no USB code at all."));
+        column.addView(usb);
+
+        LinearLayout pc = Ui.section(activity, "this pc",
+                "Open a link a computer can use", "not in this build");
+        pc.addView(Ui.note(activity, "The shipped app offered an ADB loopback link for a "
+                + "computer at the other end of the cable. This one does not."));
+        column.addView(pc);
+
+        LinearLayout bt = Ui.section(activity, "bluetooth",
+                "Scan, read services, send commands", "Classic serial, no internet needed");
         if (!Perms.hasRadio(activity)) {
-            column.addView(Ui.label(activity, "radio permission"));
-            column.addView(Ui.body(activity, Perms.explain(activity)));
-            column.addView(Ui.action(activity, "ASK FOR IT", Ui.AMBER, new View.OnClickListener() {
+            bt.addView(Ui.note(activity, Perms.explain(activity)));
+            bt.addView(Ui.action(activity, "ASK FOR IT", new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     Perms.ensureRadio(activity);
                 }
             }));
-        }
-
-        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-        if (adapter == null) {
-            column.addView(Ui.note(activity, "This phone reports no Bluetooth adapter."));
-            return column;
-        }
-        if (!adapter.isEnabled()) {
-            column.addView(Ui.note(activity, "Bluetooth is off. Pairing and sending both need "
-                    + "it on; nothing in this app turns it on for you."));
-            return column;
-        }
-
-        final List<BluetoothDevice> bonded = new ArrayList<BluetoothDevice>();
-        try {
-            Set<BluetoothDevice> devices = adapter.getBondedDevices();
-            for (BluetoothDevice device : devices) {
-                bonded.add(device);
-            }
-        } catch (SecurityException e) {
-            // Only say it here when the card above is not already saying it.
-            if (Perms.hasRadio(activity)) {
-                column.addView(Ui.note(activity, Perms.explain(activity)));
-            }
-            return column;
-        }
-
-        column.addView(Ui.label(activity, "paired phones"));
-        if (bonded.isEmpty()) {
-            column.addView(Ui.note(activity, "Nothing is paired yet. Pair the other phone in "
-                    + "the Android settings first; this screen only sends to something already "
-                    + "trusted."));
-        }
-
-        final EditText message = Ui.textField(activity, "message, 400 characters",
-                "SOS need help");
-        final TextView status = Ui.note(activity, "");
-
-        for (final BluetoothDevice device : bonded) {
-            String label;
+        } else {
+            BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+            java.util.Set<BluetoothDevice> bonded;
             try {
-                label = device.getName() + "  " + device.getAddress();
+                bonded = adapter == null ? new java.util.LinkedHashSet<BluetoothDevice>()
+                        : adapter.getBondedDevices();
             } catch (SecurityException e) {
-                label = device.getAddress();
+                bonded = new java.util.LinkedHashSet<BluetoothDevice>();
             }
-            column.addView(Ui.action(activity, "SEND TO " + label, Ui.TEAL,
-                    new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            send(activity, device, message, status);
-                        }
-                    }));
+            bt.addView(Ui.note(activity, bonded.isEmpty()
+                    ? "Paired devices: none. Pair the other phone in Android settings, then "
+                    + "come back - this screen reads the list live and never asks for a scan."
+                    : "Paired devices: " + bonded.size() + ". One framed line per send."));
+            final EditText message = Ui.field(activity, "message to send", "",
+                    android.text.InputType.TYPE_CLASS_TEXT
+                            | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+            final TextView status = Ui.note(activity, "");
+            bt.addView(Ui.fieldBlock(activity, "Message", message));
+            for (final BluetoothDevice device : bonded) {
+                String label;
+                try {
+                    label = device.getName() + "  " + device.getAddress();
+                } catch (SecurityException e) {
+                    label = device.getAddress();
+                }
+                bt.addView(Ui.button(activity, "SEND TO " + label, Ui.TEAL,
+                        new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                send(activity, device, message, status);
+                            }
+                        }));
+            }
+            bt.addView(status);
         }
-        column.addView(message);
-        column.addView(status);
-        column.addView(Ui.note(activity, "Each message is one framed line: a sender id, a "
+        column.addView(bt);
+
+        LinearLayout survey = Ui.section(activity, "survey - active scan",
+                "Wifi and bluetooth intel, on demand", "off - not in this build");
+        survey.addView(Ui.note(activity, "V1 scanned nearby networks and wrote an encrypted "
+                + "log while its screen was open. This app has no scan, no log and no INTERNET "
+                + "permission."));
+        column.addView(survey);
+
+        column.addView(Ui.note(activity, "Every message is one framed line: a sender id, a "
                 + "sequence number and the text, with tabs and newlines folded so a message can "
                 + "never split in half."));
         return column;
@@ -173,16 +173,23 @@ public final class Kit {
 
     public static View share(final Activity activity, final Runnable back) {
         LinearLayout column = Tools.screen(activity, "SHARE",
-                "Hand the app's own data to another phone, on purpose and by your hand.", back);
+                "hand it on by your hand, or not at all", back);
 
+        LinearLayout app = Ui.section(activity, "the whole app",
+                "Pass FieldKit on as a file", "not in this build");
+        app.addView(Ui.note(activity, "The shipped app could write its own APK to a folder "
+                + "so the next phone could install it. This build has no file provider, so it "
+                + "cannot hand its own package over - copy it from a computer instead."));
+        column.addView(app);
+
+        LinearLayout data = Ui.section(activity, "your data",
+                "Settings as one plain file", "not a secret - keep it like a note");
         String backup = Store.backupText(activity);
-        column.addView(Ui.caps(activity, "Backup contents", 13f, Ui.AMBER));
-        column.addView(Ui.body(activity, backup));
-        column.addView(Ui.note(activity, backup.split("\n").length + " lines, "
+        data.addView(Ui.body(activity, backup));
+        data.addView(Ui.note(activity, backup.split("\n").length + " lines, "
                 + backup.length() + " characters. Plain text: it is a copy of your settings, "
                 + "not a secret."));
-
-        column.addView(Ui.action(activity, "SAVE AS A FILE", Ui.AMBER, new View.OnClickListener() {
+        data.addView(Ui.action(activity, "SAVE AS A FILE", Ui.AMBER, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 String stamp = new SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(new Date());
@@ -192,7 +199,7 @@ public final class Kit {
                         V2Activity.REQ_EXPORT);
             }
         }));
-        column.addView(Ui.button(activity, "SEND IT ANYWHERE", Ui.TEAL, new View.OnClickListener() {
+        data.addView(Ui.button(activity, "SEND IT ANYWHERE", Ui.TEAL, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent send = new Intent(Intent.ACTION_SEND);
@@ -202,15 +209,29 @@ public final class Kit {
                 activity.startActivity(Intent.createChooser(send, "Send the backup"));
             }
         }));
-        column.addView(Ui.button(activity, "RESTORE FROM A FILE", Ui.AMBER,
+        data.addView(Ui.button(activity, "RESTORE FROM A FILE", Ui.AMBER,
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         se.blimark.fieldkit.Saf.pickFile(activity, V2Activity.REQ_IMPORT);
                     }
                 }));
-        column.addView(Ui.note(activity, "A restore replaces every stored value. The sealed "
+        data.addView(Ui.note(activity, "A restore replaces every stored value. The sealed "
                 + "journal is a separate file and stays where it is."));
+        column.addView(data);
+
+        LinearLayout metadata = Ui.section(activity, "metadata - before it leaves",
+                "Strip what a photo says about you", "no photos in this build");
+        metadata.addView(Ui.note(activity, "The shipped app rewrote JPEG headers so a picture "
+                + "carried no time, place or device. This build never handles an image, so there "
+                + "is nothing to strip."));
+        column.addView(metadata);
+
+        LinearLayout any = Ui.section(activity, "any file",
+                "Pick a file and send it with a note", "not in this build");
+        any.addView(Ui.note(activity, "V1 could attach any file from the picker to a message. "
+                + "Only the backup above leaves this app, and only through the system picker."));
+        column.addView(any);
         return column;
     }
 
@@ -225,9 +246,13 @@ public final class Kit {
     /** Paints the ICE card onto the lock screen, which is the one surface a
      *  stranger can read without the passcode. */
     public static void wallpaper(Activity activity) {
-        String[] lines = Ice.lines(Store.owner(activity),
+        wallpaper(activity, Ice.lines(Store.owner(activity),
                 Store.get(activity, "blood", ""), Store.get(activity, "allergies", ""),
-                Store.get(activity, "meds", ""), Store.get(activity, "contact", ""));
+                Store.get(activity, "meds", ""), Store.get(activity, "contact", "")));
+    }
+
+    /** Paints exactly the lines the Screens card holds, in V1's nightly-routine order. */
+    public static void wallpaper(Activity activity, String[] lines) {
         if (lines.length == 0) {
             android.widget.Toast.makeText(activity, "Fill in the ICE fields first",
                     android.widget.Toast.LENGTH_LONG).show();
@@ -297,25 +322,76 @@ public final class Kit {
 
     public static View screens(final Activity activity, final Runnable back) {
         LinearLayout column = Tools.screen(activity, "SCREENS",
-                "The ICE card as a lock screen, built from what Settings holds.", back);
-        String[] lines = Ice.lines(Store.owner(activity),
-                Store.get(activity, "blood", ""), Store.get(activity, "allergies", ""),
-                Store.get(activity, "meds", ""), Store.get(activity, "contact", ""));
-        column.addView(Ui.body(activity, lines.length == 0
-                ? "Nothing to paint yet: the name, blood type, allergies, medicines and contact "
-                + "are empty. Settings fills them."
-                : Ice.summary(lines)));
-        column.addView(Ui.action(activity, "PAINT IT ON THE LOCK SCREEN", Ui.ORANGE,
+                "the lines a stranger reads without unlocking your phone", back);
+
+        String saved = Store.get(activity, "routine", "");
+        final EditText routine = Ui.field(activity, "one thing per line", saved,
+                android.text.InputType.TYPE_CLASS_TEXT
+                        | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                        | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        routine.setMinLines(5);
+        if (saved.length() == 0) {
+            StringBuilder prefill = new StringBuilder();
+            for (String line : Ice.lines(Store.owner(activity),
+                    Store.get(activity, "blood", ""), Store.get(activity, "allergies", ""),
+                    Store.get(activity, "meds", ""), Store.get(activity, "contact", ""))) {
+                if (prefill.length() > 0) {
+                    prefill.append('\n');
+                }
+                prefill.append(line);
+            }
+            routine.setText(prefill.toString());
+        }
+
+        LinearLayout card = Ui.section(activity, "nightly routine - one thing per line",
+                "What the lock screen says",
+                "Name, blood type, allergies, medicines and one contact are the usual five.");
+        card.addView(routine);
+        card.addView(Ui.action(activity, "SET AS LOCK SCREEN", Ui.ORANGE,
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        wallpaper(activity);
+                        String text = routine.getText().toString().trim();
+                        Store.put(activity, "routine", text);
+                        String[] lines = Kit.lines(text);
+                        if (lines.length == 0) {
+                            android.widget.Toast.makeText(activity,
+                                    "Write at least one line first",
+                                    android.widget.Toast.LENGTH_LONG).show();
+                            return;
+                        }
+                        wallpaper(activity, lines);
                     }
                 }));
+        column.addView(card);
+
+        LinearLayout home = Ui.section(activity, "home screen",
+                "The home screen keeps your own wallpaper", "");
+        home.addView(Ui.note(activity, "V1 shipped a set of built-in home backgrounds. This "
+                + "build paints the lock screen only and never touches the home screen."));
+        column.addView(home);
+
         column.addView(Ui.note(activity, Ice.MAX_LINES + " lines of at most " + Ice.MAX_LINE
                 + " characters, because a lock screen cannot scroll. Long values are cut with "
                 + "an ellipsis rather than wrapped."));
         return column;
+    }
+
+    /** Splits the routine box into the lines a lock screen can hold. */
+    static String[] lines(String text) {
+        java.util.List<String> out = new java.util.ArrayList<String>();
+        for (String raw : text.split("\n")) {
+            String line = raw.trim();
+            if (line.length() == 0) {
+                continue;
+            }
+            out.add(line.length() > Ice.MAX_LINE ? line.substring(0, Ice.MAX_LINE - 1) + "\u2026"
+                    : line);
+            if (out.size() == Ice.MAX_LINES) {
+                break;
+            }
+        }
+        return out.toArray(new String[0]);
     }
 
     // ---- library -----------------------------------------------------------
@@ -337,7 +413,7 @@ public final class Kit {
 
     public static View library(final Activity activity, final Runnable back) {
         LinearLayout column = Tools.screen(activity, "LIBRARY",
-                "ZIM files on this phone. Kiwix reads them; this screen counts them.", back);
+                "the books on this phone, counted rather than promised", back);
 
         List<String> lines = fromKiwixLibrary(activity);
         String tree = Store.get(activity, PREF_TREE, "");
@@ -360,35 +436,22 @@ public final class Kit {
             }
         }
 
-        if (lines.isEmpty()) {
-            column.addView(Ui.note(activity, "No folder has been chosen, and this Android "
-                    + "version will not let an app read " + ZIM_DIR + " by itself. Point the app "
-                    + "at the folder once; it keeps the permission."));
-        } else {
-            for (String entry : lines) {
-                String[] parts = entry.split("\\|");
-                LinearLayout row = Ui.card(activity, Ui.TEAL);
-                row.addView(Ui.caps(activity, parts[0].replace(".zim", ""), 12f, Ui.TEXT));
-                row.addView(Ui.note(activity, parts.length > 1 ? parts[1] : ""));
-                column.addView(row);
-            }
-            column.addView(Ui.body(activity, lines.size() + " books in this folder"));
-        }
-
-        column.addView(Ui.action(activity, lines.isEmpty() ? "CHOOSE THE KIWIX FOLDER"
+        final String kiwix = installed(activity, KIWIX);
+        LinearLayout reader = Ui.section(activity, "kiwix",
+                kiwix == null ? "Kiwix is not installed" : "Kiwix is installed",
+                "Kiwix reads ZIM files. This screen only finds them and counts them.");
+        reader.addView(Ui.action(activity, lines.isEmpty() ? "CHOOSE THE KIWIX FOLDER"
                 : "CHOOSE A DIFFERENT FOLDER", Ui.AMBER, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 pickFolder(activity);
             }
         }));
-
-        final String kiwix = installed(activity, KIWIX);
         if (kiwix == null) {
-            column.addView(Ui.note(activity, "Kiwix is not installed, so nothing here can be "
-                    + "read yet."));
+            reader.addView(Ui.note(activity, "Nothing here can be read until Kiwix is "
+                    + "installed."));
         } else {
-            column.addView(Ui.action(activity, "OPEN KIWIX", Ui.GREEN, new View.OnClickListener() {
+            reader.addView(Ui.action(activity, "OPEN KIWIX", Ui.GREEN, new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     Intent launch = activity.getPackageManager().getLaunchIntentForPackage(kiwix);
@@ -398,18 +461,43 @@ public final class Kit {
                 }
             }));
         }
+        column.addView(reader);
+
+        LinearLayout shelf = Ui.section(activity, "starter shelf",
+                "Ten useful first pages", "not in this build");
+        shelf.addView(Ui.note(activity, "V1 listed ten starter pages and starred ten starter "
+                + "searches. This build cannot deep-link into Kiwix, so it cannot open a page "
+                + "by name: search inside Kiwix instead."));
+        column.addView(shelf);
+
+        LinearLayout books = Ui.section(activity, "on this phone",
+                lines.isEmpty() ? "No books found yet"
+                        : lines.size() + (lines.size() == 1 ? " book in this folder"
+                        : " books in this folder"),
+                lines.isEmpty() ? "Point the app at the folder once; it keeps the permission."
+                        : "Sizes and article counts are read from each file.");
+        if (lines.isEmpty()) {
+            books.addView(Ui.note(activity, "This Android version will not let an app read "
+                    + ZIM_DIR + " by itself, so no folder means no list."));
+        } else {
+            for (String entry : lines) {
+                String[] parts = entry.split("\\|");
+                books.addView(Ui.row(activity, parts[0].replace(".zim", ""),
+                        parts.length > 1 ? parts[1] : "", null));
+            }
+        }
+        column.addView(books);
+
+        LinearLayout favourites = Ui.section(activity, "favourites",
+                "Add a favourite", "not in this build");
+        favourites.addView(Ui.note(activity, "No saved articles in this build: there is no "
+                + "list to star into, and nothing that could open a page by name."));
+        column.addView(favourites);
+
         column.addView(Ui.note(activity, "Article counts come from each file's own 80-byte "
                 + "header, so a truncated download shows up as a number that cannot be right "
                 + "for its size."));
         return column;
-    }
-
-    private static String line(String name, long size, int articles) {
-        String detail = String.format(Locale.US, "%.0f MB", size / 1048576.0);
-        if (articles > 0) {
-            detail += "  " + articles + " articles";
-        }
-        return name + "|" + detail;
     }
 
     private static List<String> listTree(Activity activity, Uri treeUri) {
@@ -575,11 +663,18 @@ public final class Kit {
         return null;
     }
 
+    private static String line(String name, long size, int articles) {
+        String detail = String.format(Locale.US, "%.0f MB", size / 1048576.0);
+        if (articles > 0) {
+            detail += "  " + articles + " articles";
+        }
+        return name + "|" + detail;
+    }
     // ---- journal -----------------------------------------------------------
 
     public static View journal(final Activity activity, final Runnable back) {
         LinearLayout column = Tools.screen(activity, "FIELD JOURNAL",
-                "Notes sealed with AES-256-GCM. Wrong passphrase, no note.", back);
+                "notes sealed with AES-256-GCM - wrong passphrase, no note", back);
 
         final EditText pass = Ui.field(activity, "passphrase", "",
                 android.text.InputType.TYPE_CLASS_TEXT
@@ -592,13 +687,11 @@ public final class Kit {
         final TextView status = Ui.note(activity, Store.hasJournal(activity)
                 ? "A sealed journal is on this phone." : "No journal yet.");
 
-        LinearLayout form = Ui.card(activity);
+        LinearLayout form = Ui.section(activity, "new entry",
+                "One entry, one sealed card", "The passphrase stays in your head.");
         form.addView(Ui.fieldBlock(activity, "Passphrase", pass));
         form.addView(Ui.fieldBlock(activity, "What happened, what worked", note));
-        column.addView(form);
-        column.addView(status);
-
-        column.addView(Ui.action(activity, "SEAL AND SAVE", Ui.GREEN, new View.OnClickListener() {
+        form.addView(Ui.action(activity, "SEAL AND ADD", Ui.GREEN, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 String secret = pass.getText().toString();
@@ -616,33 +709,42 @@ public final class Kit {
                 }
             }
         }));
-        column.addView(Ui.action(activity, "OPEN THE JOURNAL", Ui.AMBER, new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String secret = pass.getText().toString();
-                try {
-                    String text = Store.open(secret, Store.readJournal(activity));
-                    note.setText(text);
-                    status.setText("Opened. " + text.length() + " characters.");
-                } catch (javax.crypto.AEADBadTagException e) {
-                    status.setText("That passphrase does not open this journal.");
-                } catch (Exception e) {
-                    status.setText("Could not open: " + e.getMessage());
-                }
-            }
-        }));
-        column.addView(Ui.button(activity, "DELETE THE JOURNAL", Ui.RED, new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                File file = Store.journalFile(activity);
-                if (file.delete()) {
-                    note.setText("");
-                    status.setText("Deleted.");
-                } else {
-                    status.setText("Nothing to delete.");
-                }
-            }
-        }));
+        column.addView(form);
+        column.addView(status);
+
+        LinearLayout open = Ui.section(activity, "what is stored",
+                "The sealed file, opened with the same passphrase", "");
+        open.addView(Ui.action(activity, "OPEN THE JOURNAL", Ui.AMBER,
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        String secret = pass.getText().toString();
+                        try {
+                            String text = Store.open(secret, Store.readJournal(activity));
+                            note.setText(text);
+                            status.setText("Opened. " + text.length() + " characters.");
+                        } catch (javax.crypto.AEADBadTagException e) {
+                            status.setText("That passphrase does not open this journal.");
+                        } catch (Exception e) {
+                            status.setText("Could not open: " + e.getMessage());
+                        }
+                    }
+                }));
+        open.addView(Ui.button(activity, "CLEAR THE WHOLE JOURNAL", Ui.RED,
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        File file = Store.journalFile(activity);
+                        if (file.delete()) {
+                            note.setText("");
+                            status.setText("Deleted.");
+                        } else {
+                            status.setText("Nothing to delete.");
+                        }
+                    }
+                }));
+        column.addView(open);
+
         column.addView(Ui.note(activity, "The key is stretched from your passphrase with "
                 + "PBKDF2 (60,000 rounds, 16-byte salt) and every save gets a fresh random IV. "
                 + "Lose the passphrase and the notes are gone; that is what sealed means."));
@@ -653,18 +755,43 @@ public final class Kit {
 
     public static View maps(final Activity activity, final Runnable back) {
         LinearLayout column = Tools.screen(activity, "MAP",
-                "Pick an .mbtiles file and this screen tells you what is really inside it.",
-                back);
-        column.addView(Ui.action(activity, "CHOOSE A MAP FILE", Ui.BLUE, new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                se.blimark.fieldkit.Saf.pickFile(activity, V2Activity.REQ_MBTILES);
-            }
-        }));
-        column.addView(Ui.body(activity, mapsReport == null ? "" : mapsReport));
-        column.addView(Ui.note(activity, "This build does not draw tiles. It opens the database, "
-                + "reads the metadata and counts the tiles, which is how you find out whether the "
-                + "file you carried is the one you meant to carry."));
+                "what is in the file, before you trust it", back);
+
+        LinearLayout file = Ui.section(activity, "map file",
+                mapsReport == null ? "No map loaded" : "A map has been read", mapsReport == null
+                        ? "An .mbtiles file is one database with tiles inside."
+                        : "The numbers below come from the file itself.");
+        file.addView(Ui.action(activity, "CHOOSE AN .MBTILES FILE", Ui.BLUE,
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        se.blimark.fieldkit.Saf.pickFile(activity, V2Activity.REQ_MBTILES);
+                    }
+                }));
+        column.addView(file);
+
+        LinearLayout report = Ui.section(activity, "the map",
+                "Metadata and tile count", "");
+        report.addView(Ui.body(activity, mapsReport == null
+                ? "Nothing read yet. Pick a file and this card fills in."
+                : mapsReport));
+        report.addView(Ui.note(activity, "This build does not draw tiles and does not read a "
+                + "position: it opens the database, reads the metadata and counts the tiles, "
+                + "which is how you find out whether the file you carried is the one you meant "
+                + "to carry."));
+        column.addView(report);
+
+        LinearLayout tools = Ui.section(activity, "map tools",
+                "Crosshair, zoom, my position", "not in this build");
+        tools.addView(Ui.note(activity, "No map view, so no crosshair, no zoom and no blue "
+                + "dot - that needs a renderer this app does not have."));
+        column.addView(tools);
+
+        LinearLayout waypoints = Ui.section(activity, "waypoints",
+                "Import and export GPX", "not in this build");
+        waypoints.addView(Ui.note(activity, "No waypoint list in this build, so there is "
+                + "nothing to export to GPX or to import from it."));
+        column.addView(waypoints);
         return column;
     }
 

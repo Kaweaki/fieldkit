@@ -1,18 +1,20 @@
 ‹  FIELDKIT                              Button     x=  50- 373 y=  138-  264
 CALCULATOR                               TextView   x=  50-1030 y=  286-  397
-Every number below is computed here, wit TextView   x=  50-1030 y=  397-  501
-DISINFECT WATER                          TextView   x=  50-1030 y=  563-  607
-LITRES TO TREAT                          TextView   x=  50-1030 y=  641-  685
-10                                       EditText   x=  50-1030 y=  702-  827
-BLEACH STRENGTH, %                       TextView   x=  50-1030 y=  861-  905
-5                                        EditText   x=  50-1030 y=  922- 1047
-CLOUDY WATER? 1 YES, 0 NO                TextView   x=  50-1030 y= 1081- 1125
-0                                        EditText   x=  50-1030 y= 1142- 1267
-BLEACH DOSE                              Button     x=  50- 430 y= 1300- 1426
-REHYDRATION DRINK                        TextView   x=  50-1030 y= 1482- 1530
-ORS FOR 1 LITRE                          Button     x=  50- 489 y= 1563- 1689
-POWER                                    TextView   x=  50-1030 y= 1751- 1795
-BATTERY, MAH                             TextView   x=  50-1030 y= 1829- 1873
-10000                                    EditText   x=  50-1030 y= 1890- 2015
-DRAW, MA                                 TextView   x=  50-1030 y= 2049- 2093
-500                                      EditText   x=  50-1030 y= 2110- 2208
+the sums that keep coming back           TextView   x=  50-1030 y=  397-  453
+01                                       TextView   x=  94- 188 y=  653-  701
+Chlorinate water                         TextView   x= 188- 967 y=  625-  681
+bleach drops per litre                   TextView   x= 188- 967 y=  681-  729
+›                                        TextView   x= 967- 986 y=  649-  705
+02                                       TextView   x=  94- 188 y=  956- 1004
+Rehydration salts                        TextView   x= 188- 967 y=  928-  984
+WHO ORS, scaled to body weight           TextView   x= 188- 967 y=  984- 1032
+›                                        TextView   x= 967- 986 y=  952- 1008
+03                                       TextView   x=  94- 188 y= 1259- 1307
+Solar sizing                             TextView   x= 188- 967 y= 1231- 1287
+panel watts and battery amp-hours        TextView   x= 188- 967 y= 1287- 1335
+›                                        TextView   x= 967- 986 y= 1255- 1311
+04                                       TextView   x=  94- 188 y= 1562- 1610
+Daily water need                         TextView   x= 188- 967 y= 1534- 1590
+litres per day, by profile               TextView   x= 188- 967 y= 1590- 1638
+›                                        TextView   x= 967- 986 y= 1558- 1614
+The shipped build carried ten tools. The TextView   x=  50-1030 y= 1721- 1941

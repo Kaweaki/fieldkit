@@ -51,24 +51,39 @@ outlined pill with amber caps**. V2 now follows that rule (`Ui.action` versus
 
 ## Per-screen verdict
 
-| Screen | Files | Verdict | Reason |
-|---|---|---|---|
-| Home grid | `00_home` | identical frame, deliberate content | same header block, rule, 3x4 grid, tile geometry, fills and accents; V2 adds the SOS card and shows its own RADIO LOCKED card, and its tile captions name what V2 actually does (9 protocols, not 40) |
-| Profile | `01_profile` | identical frame, deliberate content | V1's back pill, title, subtitle and rule; fields are labelled and grouped in a card like V1's, but the fields are V2's (weight, people, days) and the result block is V2's |
-| Settings | `02_settings` | identical frame, different content | V1 folds sections, V2 shows one card per group; every box is labelled |
-| Medical | `03_medical` | V1 vocabulary, V2 content | titled EMERGENCY with back "ALL TOOLS" as V1 does; nine protocols against V1's forty, so the subtitle is V1's and the count is not claimed |
-| Calculator | `04_calculator` | identical frame, V2 content | grey caps section labels, labelled inputs; four sums instead of V1's ten |
-| Link | `05_link`, `14_link_noperm` | deliberately different | V1 is a USB/OTG/PC/BLE survey screen; V2 is Bluetooth text only, so its subtitle describes that and the permission card appears only while the permission is actually missing |
-| Share | `06_share` | identical frame, V2 content | V1 "send the whole app"; V2 exports the app's own data, and says so |
-| Screens | `07_screens` | identical frame, V2 content | all-wallpaper tooling in V1, ICE card on the lock screen in V2 |
-| Library | `08_library` | deliberately different | V1 opens a Kiwix-missing dialog; V2 counts ZIMs and explains the scoped-storage limit in the screen itself |
-| Journal | `09_journal` | identical frame, V2 content | V1 title FIELD JOURNAL, V2 uses the same title and a labelled passphrase/note card |
-| Maps | `10_maps` | deliberately different | titled MAP as V1; V2 inspects an .mbtiles file and does not draw tiles, which the subtitle states |
-| Comms | `11_comms` | identical frame, V2 content | Briar detection plus a list of what this app carries itself |
-| Help | `12_help` | identical frame, V2 content | live device facts and an explicit list of what the build does not do |
-| SOS panel | `13_sos` | V2 only, deliberate | V1 has no distress screen; V2 uses the shared frame and the panel says plainly when the phone has no flash |
+The rebuild below reproduces V1's *information architecture*: the same section
+labels, the same order, the same controls in the same place. Where V2 cannot do
+what a section did, the section keeps V1's position and says so in one line,
+rather than disappearing or pretending to a switch it does not have.
 
-Status of the review: home, profile, settings, link and the SOS panel were
-compared against V1 and restyled in this pass. The remaining tiles were captured
-after the restyle but have **not yet been compared pixel by pixel** — that is the
-first job listed in `docs/V2-HANDOFF.md`.
+| Screen | Files | V1 structure reproduced | What differs, said on the screen |
+|---|---|---|---|
+| Home | `00_home` | header block, rule, 3x4 grid at V1's geometry | the grid is first, as in V1; the SOS card and the radio card sit *below* it because V1 has neither |
+| Profile | `01_profile` | name, body weight, age, ten condition chips, six allergy chips, other allergies, medicines, three workload chips | V1 saved as you typed; this build has one SAVE, because its store writes on demand |
+| Settings | `02_settings` | thirteen folded sections in V1's order, a plus opening to a minus | PASSCODE, APPEARANCE, ADVANCED MODE, ACTIVE SURVEY, FIELDKIT PEERS, SAVED ENTITIES, LOW BATTERY MODE and the WIDGET each state in one line that this build does not back them |
+| Medical | `03_medical` | title EMERGENCY, back ALL TOOLS, IF YOU SEE / OPEN table, › TAG on the right, tap to read | nine protocols against V1's forty; the count is printed, not implied |
+| Calculator | `04_calculator` | numbered rows 01..10 with a name, a one-line detail and › | four sums, and the footnote says so; the shipped ten needed a map, a radio or a library |
+| Link | `05_link` | USB-OTG, THIS PC, BLUETOOTH, SURVEY - ACTIVE SCAN, in that order | only BLUETOOTH works (classic serial send); the other three say they are not in this build |
+| Share | `06_share` | the whole app, your data, metadata before it leaves, any file | only the data export/restore is implemented; the other three say why not |
+| Screens | `07_screens` | NIGHTLY ROUTINE - ONE THING PER LINE, SET AS LOCK SCREEN, the home-screen card, the size footnote | the box paints exactly the lines typed into it; there is no built-in home background set |
+| Library | `08_library` | KIWIX card, STARTER SHELF, ON THIS PHONE, FAVOURITES | the shelf and favourites are named but not implemented: no deep link into Kiwix; the list and counts are real |
+| Journal | `09_journal` | NEW ENTRY card, text area, SEAL AND ADD, what is stored, CLEAR THE WHOLE JOURNAL | V1 used the app passcode; each entry here is sealed on its own, so the passphrase has its own field |
+| Maps | `10_maps` | MAP FILE, THE MAP, MAP TOOLS, WAYPOINTS | only the file check exists; no renderer, so no crosshair, zoom, position or GPX |
+| Comms | `11_comms` | V2's own structure, restyled | V1's comms screen could not be dumped from the shipped APK, so this is the one screen whose order is not copied |
+| Help | `12_help` | THIS DEVICE, WHAT THIS IS, WHAT THIS BUILD DOES NOT DO | live facts plus an explicit list of absences |
+| SOS panel | `13_sos` | V2 only | V1 has no distress panel; it uses the same frame and says plainly when the phone has no flash |
+
+## What was checked, and how
+
+- Structure: V1's full scrollable contents were dumped per tile (`app/build/v1full/*.txt`)
+  by tapping each tile by its accessibility bounds, then compared against the
+  rebuilt screens. Earlier dumps had tapped the wrong coordinate and produced the
+  Settings screen for every tile; that is why this pass started from a layout
+  dump rather than from remembered screenshots.
+- Interaction: on `fk34ui`, a condition chip was tapped (it lit and persisted)
+  and the OWNER section was opened (the \+\ became –\ and the fields appeared).
+- Whole app: all twelve tiles plus SOS opened with an empty crash buffer, same pid
+  before and after.
+- Not checked: the SM-A505F phone had no ADB connection during this pass, so the
+  restyle has still only run on the API 34 emulator.
+

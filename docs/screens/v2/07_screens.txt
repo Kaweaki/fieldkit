@@ -1,6 +1,12 @@
 ‹  FIELDKIT                              Button     x=  50- 373 y=  138-  264
 SCREENS                                  TextView   x=  50-1030 y=  286-  397
-The ICE card as a lock screen, built fro TextView   x=  50-1030 y=  397-  501
-ICE HARALD BLIMARK                       TextView   x=  50-1030 y=  557-  613
-PAINT IT ON THE LOCK SCREEN              Button     x=  50- 768 y=  646-  772
-5 lines of at most 34 characters, becaus TextView   x=  50-1030 y=  772-  936
+the lines a stranger reads without unloc TextView   x=  50-1030 y=  397-  501
+NIGHTLY ROUTINE - ONE THING PER LINE     TextView   x=  94- 986 y=  634-  678
+What the lock screen says                TextView   x=  94- 986 y=  678-  747
+Name, blood type, allergies, medicines a TextView   x=  94- 986 y=  747-  855
+ICE HARALD BLIMARK                       EditText   x=  94- 986 y=  872- 1205
+SET AS LOCK SCREEN                       Button     x=  94- 625 y= 1238- 1364
+HOME SCREEN                              TextView   x=  94- 986 y= 1485- 1529
+The home screen keeps your own wallpaper TextView   x=  94- 986 y= 1529- 1598
+V1 shipped a set of built-in home backgr TextView   x=  94- 986 y= 1598- 1762
+5 lines of at most 34 characters, becaus TextView   x=  50-1030 y= 1806- 1970

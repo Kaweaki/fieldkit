@@ -1,11 +1,20 @@
 ‹  FIELDKIT                              Button     x=  50- 373 y=  138-  264
 PROFILE                                  TextView   x=  50-1030 y=  286-  397
 who is here - the calculators use every  TextView   x=  50-1030 y=  397-  453
-BODY WEIGHT, KG                          TextView   x=  94- 986 y=  620-  664
-75                                       EditText   x=  94- 986 y=  681-  806
-PEOPLE TO SUPPLY                         TextView   x=  94- 986 y=  840-  884
-1                                        EditText   x=  94- 986 y=  901- 1026
-DAYS TO COVER                            TextView   x=  94- 986 y= 1060- 1104
-14                                       EditText   x=  94- 986 y= 1121- 1246
-WORK IT OUT                              Button     x=  50- 418 y= 1323- 1449
-Boil time assumes ground below 2000 m. W TextView   x=  50-1030 y= 1557- 1721
+NAME                                     TextView   x=  94- 986 y=  620-  664
+HARALD BLIMARK                           EditText   x=  94- 986 y=  681-  806
+BODY WEIGHT, KG                          TextView   x=  94- 986 y=  840-  884
+75                                       EditText   x=  94- 986 y=  901- 1026
+AGE IN YEARS - OPTIONAL                  TextView   x=  94- 986 y= 1060- 1104
+age in years                             EditText   x=  94- 986 y= 1121- 1246
+CONDITIONS - TAP ALL THAT APPLY          TextView   x=  94- 986 y= 1367- 1411
+pregnant                                 TextView   x=  94- 529 y= 1433- 1565
+breastfeeding                            TextView   x= 551- 986 y= 1433- 1565
+diabetes                                 TextView   x=  94- 529 y= 1587- 1719
+asthma                                   TextView   x= 551- 986 y= 1587- 1719
+epilepsy                                 TextView   x=  94- 529 y= 1741- 1873
+heart condition                          TextView   x= 551- 986 y= 1741- 1873
+kidney disease                           TextView   x=  94- 529 y= 1895- 2027
+immunosuppressed                         TextView   x= 551- 986 y= 1895- 2027
+blood thinner                            TextView   x=  94- 529 y= 2049- 2181
+mobility limit                           TextView   x= 551- 986 y= 2049- 2181

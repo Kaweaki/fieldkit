@@ -1,15 +1,25 @@
 ‹  ALL TOOLS                             Button     x=  50- 413 y=  138-  264
 EMERGENCY                                TextView   x=  50-1030 y=  286-  397
 find the line that matches, tap it, read TextView   x=  50-1030 y=  397-  453
-SEVERE BLEEDING                          Button     x=  50- 513 y=  542-  668
-NOT BREATHING                            Button     x=  50- 478 y=  701-  827
-CHOKING, ADULT                           Button     x=  50- 488 y=  860-  986
-BURNS                                    Button     x=  50- 293 y= 1019- 1145
-HYPOTHERMIA                              Button     x=  50- 447 y= 1178- 1304
-HEAT STROKE                              Button     x=  50- 430 y= 1337- 1463
-BROKEN BONE                              Button     x=  50- 435 y= 1496- 1622
-DEHYDRATION                              Button     x=  50- 437 y= 1655- 1781
-FEVER IN THE FIELD                       Button     x=  50- 548 y= 1814- 1940
-ICE CARD                                 TextView   x=  50-1030 y= 2051- 2099
-Nothing filled in yet. Settings holds th TextView   x=  50-1030 y= 2099- 2155
-PUT THIS ON THE LOCK SCREEN              Button     x=  50- 783 y= 2188- 2208
+IF YOU SEE                               TextView   x=  94- 878 y=  625-  681
+OPEN                                     TextView   x= 878- 986 y=  631-  675
+Bleeding that will not stop              TextView   x=  94- 761 y=  762-  818
+› BLEEDING                               TextView   x= 761- 986 y=  768-  812
+Not breathing, no pulse                  TextView   x=  94- 877 y=  899-  955
+› CPR                                    TextView   x= 877- 986 y=  905-  949
+Blue lips, cannot speak                  TextView   x=  94- 775 y= 1036- 1092
+› CHOKING                                TextView   x= 775- 986 y= 1042- 1086
+Burn or scalded skin                     TextView   x=  94- 824 y= 1173- 1229
+› BURNS                                  TextView   x= 824- 986 y= 1179- 1223
+Cold, confused, shivering stopped        TextView   x=  94- 669 y= 1310- 1414
+› HYPOTHERMIA                            TextView   x= 669- 986 y= 1340- 1384
+Hot skin, confusion, no sweat            TextView   x=  94- 685 y= 1495- 1551
+› HEAT STROKE                            TextView   x= 685- 986 y= 1501- 1545
+Limb bent the wrong way                  TextView   x=  94- 750 y= 1632- 1688
+› FRACTURE                               TextView   x= 750- 986 y= 1638- 1682
+Sunken eyes, dark urine                  TextView   x=  94- 678 y= 1769- 1825
+› DEHYDRATION                            TextView   x= 678- 986 y= 1775- 1819
+Fever with stiff neck or rash            TextView   x=  94- 832 y= 1906- 1962
+› FEVER                                  TextView   x= 832- 986 y= 1912- 1956
+ICE CARD                                 TextView   x=  94- 986 y= 2122- 2166
+What a stranger needs in ten seconds     TextView   x=  94- 986 y= 2166- 2208

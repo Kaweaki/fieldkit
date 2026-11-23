@@ -1,5 +1,19 @@
 ‹  FIELDKIT                              Button     x=  50- 373 y=  138-  264
 MAP                                      TextView   x=  50-1030 y=  286-  397
-Pick an .mbtiles file and this screen te TextView   x=  50-1030 y=  397-  501
-CHOOSE A MAP FILE                        Button     x=  50- 555 y=  590-  716
-This build does not draw tiles. It opens TextView   x=  50-1030 y=  772-  992
+what is in the file, before you trust it TextView   x=  50-1030 y=  397-  453
+MAP FILE                                 TextView   x=  94- 986 y=  586-  630
+No map loaded                            TextView   x=  94- 986 y=  630-  699
+An .mbtiles file is one database with ti TextView   x=  94- 986 y=  699-  751
+CHOOSE AN .MBTILES FILE                  Button     x=  94- 723 y=  784-  910
+THE MAP                                  TextView   x=  94- 986 y= 1031- 1075
+Metadata and tile count                  TextView   x=  94- 986 y= 1075- 1144
+Nothing read yet. Pick a file and this c TextView   x=  94- 986 y= 1144- 1200
+This build does not draw tiles and does  TextView   x=  94- 986 y= 1200- 1476
+MAP TOOLS                                TextView   x=  94- 986 y= 1597- 1641
+Crosshair, zoom, my position             TextView   x=  94- 986 y= 1641- 1710
+not in this build                        TextView   x=  94- 986 y= 1710- 1762
+No map view, so no crosshair, no zoom an TextView   x=  94- 986 y= 1762- 1870
+WAYPOINTS                                TextView   x=  94- 986 y= 1991- 2035
+Import and export GPX                    TextView   x=  94- 986 y= 2035- 2104
+not in this build                        TextView   x=  94- 986 y= 2104- 2156
+No waypoint list in this build, so there TextView   x=  94- 986 y= 2156- 2208
