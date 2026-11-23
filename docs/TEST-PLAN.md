@@ -101,3 +101,48 @@ release notes with a date.
 | 3 | no | blocked: no phone |
 
 Until the source is committed, "test all functions" is a plan, not a claim.
+
+## Device run: 2026-11-23
+
+Executed on the one Android device available, through `app/probe/` — a separate
+package that calls the 2.7 classes and writes each result to logcat.
+
+Device: Samsung SM-A505F, Android 10 (API 29), 1080x2340.
+Nothing here exercises API 31+ behaviour; the phone cannot reach it.
+
+| Probe key | Result | Meaning |
+|---|---|---|
+| `torch_supported` | `true` | CameraManager reports a flash unit |
+| `torch_on` / `torch_off` | `true` / `true` | The LED lit and went out, no CAMERA permission requested |
+| `compass_started` | `true` | Rotation vector sensor registered |
+| `heading` | `NE 61` | Live bearing with cardinal point |
+| `radio_ready` | `true` (after grant) | `Perms.needed()` returned ACCESS_FINE_LOCATION on API 29 |
+| `radio_ready_before_prompt` | `false` | With the permission revoked the app asks instead of crashing |
+| `radio_ready_after_prompt` | `true` | The grant callback re-enables the radio path |
+| `sun_london_0621` | `03:43 / 20:21` | Matches the JVM vector exactly |
+| `water_5pct_10l` | `1,68 mL ... 34 drops` | Matches, with the device's decimal comma |
+| `power` | `10000 mAh at 500 mA: about 17,0 h` | Matches |
+| `ice` | all five fields present | ICE line building works |
+| `backup_roundtrip` | `true` | Vault payload survived encode/decode |
+| `textlink` | `id1/3/hello there` | Chunked message framing works |
+| `insets_top_padding` | `0` | Inconclusive, see below |
+
+`GrantPermissionsActivity` in the system log confirmed the request came from the
+probe for `ACCESS_FINE_LOCATION`. The deny branch was not exercised: the tap
+that presses the probe button releases into the dialog that button opens, and
+One UI's allow button sits under that point.
+
+The insets result proves nothing either way. This activity is not edge-to-edge
+and targets 34, so the decor consumes the system bars before the content view
+sees them. Padding only matters with `SYSTEM_UI_FLAG_LAYOUT_*` under target 35,
+which needs Android 15.
+
+Storage was full (32 MB free of 52 GB) and blocked installation, so two ZIMs of
+37 GB of Kiwix content were removed first: `wikipedia_en_top1m_nopic` (17.1 GB)
+and `wikipedia_sv_all_mini` (4.0 GB, a subset of the `sv_all_nopic` still on the
+phone). The medical, water, food, knots, post-disaster, Appropedia, energypedia,
+low-tech and Wikivoyage ZIMs are untouched.
+
+Still untested on hardware: the Bluetooth split itself (needs API 31+), SPP over
+a real cable, MBTiles import through SAF, Kiwix intents, the widget, and
+edge-to-edge insets.
