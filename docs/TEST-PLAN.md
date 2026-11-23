@@ -146,3 +146,26 @@ low-tech and Wikivoyage ZIMs are untouched.
 Still untested on hardware: the Bluetooth split itself (needs API 31+), SPP over
 a real cable, MBTiles import through SAF, Kiwix intents, the widget, and
 edge-to-edge insets.
+
+## Kiwix library: 2026-11-23
+
+The phone held 15 ZIM files in `/storage/emulated/0/Kiwix`, but Kiwix's own
+library was empty ("Inga filer här") because the app had never scanned them.
+Two facts matter for anyone repeating this:
+
+- The library is filled by a **pull-to-scan** gesture inside the Bibliotek tab.
+  A `VIEW` intent on a `.zim` file opens that book, but only the one issued to a
+  cold-started app is remembered; the rest are displayed and forgotten.
+- The scan indexes ZIMs where they already are, recording a relative path such
+  as `../../../../../Kiwix/zimgit-water_en_2024-08.zim`. Nothing is copied into
+  `Android/data/.../files/ZIMFiles`, so FieldKit can still see the same files.
+
+After the scan, all seven requested books appear with correct sizes and article
+counts, and 14 of the 15 files are indexed. The exception is
+`wikipedia_sv_all_nopic_2026-11.zim`: its ZIM header places the trailing MD5 at
+7,612,178,401 but the file ends at 5,967,631,525, so 1.6 GB never arrived and
+Kiwix leaves it out. The other 14 satisfy `checksumPos == size - 16` exactly.
+
+FieldKit's Library tile does not read ZIMs. It reports "Kiwix is installed. ZIM
+articles stay inside Kiwix; this list only keeps links." and offers OPEN KIWIX,
+so its compatibility depends entirely on Kiwix having the books indexed.
