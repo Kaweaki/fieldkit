@@ -1,0 +1,18 @@
+‹  FIELDKIT                              Button     x=  50- 373 y=  138-  264
+CALCULATOR                               TextView   x=  50-1030 y=  286-  397
+Every number below is computed here, wit TextView   x=  50-1030 y=  397-  501
+DISINFECT WATER                          TextView   x=  50-1030 y=  563-  607
+LITRES TO TREAT                          TextView   x=  50-1030 y=  641-  685
+10                                       EditText   x=  50-1030 y=  702-  827
+BLEACH STRENGTH, %                       TextView   x=  50-1030 y=  861-  905
+5                                        EditText   x=  50-1030 y=  922- 1047
+CLOUDY WATER? 1 YES, 0 NO                TextView   x=  50-1030 y= 1081- 1125
+0                                        EditText   x=  50-1030 y= 1142- 1267
+BLEACH DOSE                              Button     x=  50- 430 y= 1300- 1426
+REHYDRATION DRINK                        TextView   x=  50-1030 y= 1482- 1530
+ORS FOR 1 LITRE                          Button     x=  50- 489 y= 1563- 1689
+POWER                                    TextView   x=  50-1030 y= 1751- 1795
+BATTERY, MAH                             TextView   x=  50-1030 y= 1829- 1873
+10000                                    EditText   x=  50-1030 y= 1890- 2015
+DRAW, MA                                 TextView   x=  50-1030 y= 2049- 2093
+500                                      EditText   x=  50-1030 y= 2110- 2208

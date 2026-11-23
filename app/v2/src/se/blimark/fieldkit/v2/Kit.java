@@ -68,9 +68,9 @@ public final class Kit {
         // Only while the permission is actually missing: an "ask for it" card on a
         // screen that already has it is the kind of lie this app must not tell.
         if (!Perms.hasRadio(activity)) {
-            column.addView(Ui.caps(activity, "Radio permission", 13f, Ui.AMBER));
+            column.addView(Ui.label(activity, "radio permission"));
             column.addView(Ui.body(activity, Perms.explain(activity)));
-            column.addView(Ui.button(activity, "ASK FOR IT", Ui.AMBER, new View.OnClickListener() {
+            column.addView(Ui.action(activity, "ASK FOR IT", Ui.AMBER, new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     Perms.ensureRadio(activity);
@@ -96,11 +96,14 @@ public final class Kit {
                 bonded.add(device);
             }
         } catch (SecurityException e) {
-            column.addView(Ui.note(activity, Perms.explain(activity)));
+            // Only say it here when the card above is not already saying it.
+            if (Perms.hasRadio(activity)) {
+                column.addView(Ui.note(activity, Perms.explain(activity)));
+            }
             return column;
         }
 
-        column.addView(Ui.caps(activity, "Paired phones", 13f, Ui.AMBER));
+        column.addView(Ui.label(activity, "paired phones"));
         if (bonded.isEmpty()) {
             column.addView(Ui.note(activity, "Nothing is paired yet. Pair the other phone in "
                     + "the Android settings first; this screen only sends to something already "
@@ -118,7 +121,7 @@ public final class Kit {
             } catch (SecurityException e) {
                 label = device.getAddress();
             }
-            column.addView(Ui.button(activity, "SEND TO " + label, Ui.TEAL,
+            column.addView(Ui.action(activity, "SEND TO " + label, Ui.TEAL,
                     new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
@@ -179,7 +182,7 @@ public final class Kit {
                 + backup.length() + " characters. Plain text: it is a copy of your settings, "
                 + "not a secret."));
 
-        column.addView(Ui.button(activity, "SAVE AS A FILE", Ui.AMBER, new View.OnClickListener() {
+        column.addView(Ui.action(activity, "SAVE AS A FILE", Ui.AMBER, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 String stamp = new SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(new Date());
@@ -302,7 +305,7 @@ public final class Kit {
                 ? "Nothing to paint yet: the name, blood type, allergies, medicines and contact "
                 + "are empty. Settings fills them."
                 : Ice.summary(lines)));
-        column.addView(Ui.button(activity, "PAINT IT ON THE LOCK SCREEN", Ui.ORANGE,
+        column.addView(Ui.action(activity, "PAINT IT ON THE LOCK SCREEN", Ui.ORANGE,
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -372,7 +375,7 @@ public final class Kit {
             column.addView(Ui.body(activity, lines.size() + " books in this folder"));
         }
 
-        column.addView(Ui.button(activity, lines.isEmpty() ? "CHOOSE THE KIWIX FOLDER"
+        column.addView(Ui.action(activity, lines.isEmpty() ? "CHOOSE THE KIWIX FOLDER"
                 : "CHOOSE A DIFFERENT FOLDER", Ui.AMBER, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -385,7 +388,7 @@ public final class Kit {
             column.addView(Ui.note(activity, "Kiwix is not installed, so nothing here can be "
                     + "read yet."));
         } else {
-            column.addView(Ui.button(activity, "OPEN KIWIX", Ui.GREEN, new View.OnClickListener() {
+            column.addView(Ui.action(activity, "OPEN KIWIX", Ui.GREEN, new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     Intent launch = activity.getPackageManager().getLaunchIntentForPackage(kiwix);
@@ -575,7 +578,7 @@ public final class Kit {
     // ---- journal -----------------------------------------------------------
 
     public static View journal(final Activity activity, final Runnable back) {
-        LinearLayout column = Tools.screen(activity, "JOURNAL",
+        LinearLayout column = Tools.screen(activity, "FIELD JOURNAL",
                 "Notes sealed with AES-256-GCM. Wrong passphrase, no note.", back);
 
         final EditText pass = Ui.field(activity, "passphrase", "",
@@ -589,11 +592,13 @@ public final class Kit {
         final TextView status = Ui.note(activity, Store.hasJournal(activity)
                 ? "A sealed journal is on this phone." : "No journal yet.");
 
-        column.addView(pass);
-        column.addView(note);
+        LinearLayout form = Ui.card(activity);
+        form.addView(Ui.fieldBlock(activity, "Passphrase", pass));
+        form.addView(Ui.fieldBlock(activity, "What happened, what worked", note));
+        column.addView(form);
         column.addView(status);
 
-        column.addView(Ui.button(activity, "SEAL AND SAVE", Ui.GREEN, new View.OnClickListener() {
+        column.addView(Ui.action(activity, "SEAL AND SAVE", Ui.GREEN, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 String secret = pass.getText().toString();
@@ -611,7 +616,7 @@ public final class Kit {
                 }
             }
         }));
-        column.addView(Ui.button(activity, "OPEN THE JOURNAL", Ui.AMBER, new View.OnClickListener() {
+        column.addView(Ui.action(activity, "OPEN THE JOURNAL", Ui.AMBER, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 String secret = pass.getText().toString();
@@ -647,10 +652,10 @@ public final class Kit {
     // ---- maps --------------------------------------------------------------
 
     public static View maps(final Activity activity, final Runnable back) {
-        LinearLayout column = Tools.screen(activity, "MAPS",
+        LinearLayout column = Tools.screen(activity, "MAP",
                 "Pick an .mbtiles file and this screen tells you what is really inside it.",
                 back);
-        column.addView(Ui.button(activity, "CHOOSE A MAP FILE", Ui.BLUE, new View.OnClickListener() {
+        column.addView(Ui.action(activity, "CHOOSE A MAP FILE", Ui.BLUE, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 se.blimark.fieldkit.Saf.pickFile(activity, V2Activity.REQ_MBTILES);

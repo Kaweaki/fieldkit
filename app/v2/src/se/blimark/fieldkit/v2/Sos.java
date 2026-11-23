@@ -52,9 +52,18 @@ public final class Sos {
         LinearLayout column = Ui.column(activity);
         column.setBackground(Ui.background(activity));
 
-        column.addView(Ui.caps(activity, "SOS", 26f, Ui.RED));
-        column.addView(Ui.note(activity, "Three short, three long, three short. It is "
-                + "recognised by anyone, and it needs no signal to send."));
+        column.addView(Ui.backPill(activity, "FIELDKIT", Ui.AMBER,
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        back.run();
+                    }
+                }));
+        column.addView(Ui.title(activity, "SOS", 30f));
+        column.addView(Ui.text(activity, "three short, three long, three short - recognised "
+                + "by anyone, and it needs no signal to send", 15f, Ui.MUTED));
+        column.addView(Ui.rule(activity));
+        column.addView(Ui.spacer(activity, 6));
 
         final View flash = new View(activity);
         flash.setBackgroundColor(0xFF1A0E10);
@@ -73,7 +82,7 @@ public final class Sos {
 
         final Sos sos = new Sos(activity, flash, state);
 
-        column.addView(Ui.button(activity, "START THE SIGNAL", Ui.RED, new View.OnClickListener() {
+        column.addView(Ui.action(activity, "START THE SIGNAL", Ui.RED, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 sos.start();

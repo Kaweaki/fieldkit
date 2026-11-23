@@ -1,0 +1,31 @@
+FIELDKIT 2.8                             TextView   x=  44- 268 y=  132-  168
+FIELDKIT                                 TextView   x=  44-1036 y=  185-  310
+offline index + tools - tap a tile       TextView   x=  44-1036 y=  310-  357
+PERMISSION DRIFT                         TextView   x=  83- 997 y=  463-  504
+Android has not granted location and fil TextView   x=  83- 997 y=  504-  590
+OPEN THE ANDROID APP SETTINGS            Button     x=  83- 766 y=  590-  722
+Profile                                  TextView   x= 154- 249 y=  949-  993
+body, water                              TextView   x=  61- 343 y=  993- 1029
+Settings                                 TextView   x= 479- 601 y=  949-  993
+app + data                               TextView   x= 399- 681 y=  993- 1029
+Medical                                  TextView   x= 819- 936 y=  949-  993
+40 protocols                             TextView   x= 737-1019 y=  993- 1029
+Calculator                               TextView   x= 127- 276 y= 1235- 1279
+10 tools                                 TextView   x=  61- 343 y= 1279- 1315
+Link                                     TextView   x= 509- 570 y= 1235- 1279
+USB, radio, survey                       TextView   x= 399- 681 y= 1279- 1315
+Share                                    TextView   x= 835- 920 y= 1235- 1279
+hand it on                               TextView   x= 737-1019 y= 1279- 1315
+Screens                                  TextView   x= 142- 261 y= 1521- 1565
+wallpapers                               TextView   x=  61- 343 y= 1565- 1601
+Library                                  TextView   x= 489- 590 y= 1521- 1565
+Kiwix stars                              TextView   x= 399- 681 y= 1565- 1601
+Journal                                  TextView   x= 823- 933 y= 1521- 1565
+sealed notes                             TextView   x= 737-1019 y= 1565- 1601
+Maps                                     TextView   x= 160- 243 y= 1807- 1851
+own map files                            TextView   x=  61- 343 y= 1851- 1887
+Comms                                    TextView   x= 482- 597 y= 1807- 1851
+Briar                                    TextView   x= 399- 681 y= 1851- 1887
+Help                                     TextView   x= 843- 912 y= 1807- 1851
+what works                               TextView   x= 737-1019 y= 1851- 1887
+Everything here works with the radio off TextView   x=  44-1036 y= 1982- 2208

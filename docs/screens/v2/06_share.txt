@@ -1,0 +1,10 @@
+‹  FIELDKIT                              Button     x=  50- 373 y=  138-  264
+SHARE                                    TextView   x=  50-1030 y=  286-  397
+Hand the app's own data to another phone TextView   x=  50-1030 y=  397-  501
+BACKUP CONTENTS                          TextView   x=  50-1030 y=  557-  605
+FIELDKIT-BACKUP 1&#10;                   TextView   x=  50-1030 y=  605-  720
+1 lines, 18 characters. Plain text: it i TextView   x=  50-1030 y=  720-  828
+SAVE AS A FILE                           Button     x=  50- 462 y=  861-  987
+SEND IT ANYWHERE                         Button     x=  50- 546 y= 1020- 1146
+RESTORE FROM A FILE                      Button     x=  50- 597 y= 1179- 1305
+A restore replaces every stored value. T TextView   x=  50-1030 y= 1305- 1413

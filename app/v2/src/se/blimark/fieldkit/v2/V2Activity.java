@@ -115,24 +115,10 @@ public final class V2Activity extends Activity {
     private View build() {
         LinearLayout column = Ui.column(this);
 
-        LinearLayout header = new LinearLayout(this);
-        header.setOrientation(LinearLayout.HORIZONTAL);
-        TextView name = Ui.caps(this, Store.owner(this), 12f, Ui.AMBER);
-        LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        name.setLayoutParams(nameParams);
-        TextView build = Ui.caps(this, "FIELDKIT 2.9", 11f, Ui.FAINT);
-        header.addView(name);
-        header.addView(build);
-        column.addView(header);
-
-        TextView title = Ui.text(this, "FIELDKIT", 38f, Ui.AMBER);
-        title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        title.setLetterSpacing(0.14f);
-        title.setPadding(0, Ui.dp(this, 6), 0, 0);
-        column.addView(title);
-
-        column.addView(Ui.text(this, "offline index + tools - tap a tile", 15f, Ui.DIM));
+        // V1 puts the build label above the title, in grey caps, and nothing else.
+        column.addView(Ui.caps(this, "FIELDKIT 2.9", 13f, Ui.MUTED));
+        column.addView(Ui.title(this, "FIELDKIT", 44f));
+        column.addView(Ui.text(this, "offline index + tools - tap a tile", 15f, Ui.MUTED));
         column.addView(Ui.rule(this));
 
         column.addView(sosBar());
@@ -146,11 +132,11 @@ public final class V2Activity extends Activity {
     /** The one thing on this screen that should be findable with cold hands. */
     private View sosBar() {
         LinearLayout bar = Ui.card(this, Ui.RED);
-        bar.setBackground(Ui.roundRect(0xFF1A0E10, Ui.RED, 14, this));
-        bar.addView(Ui.caps(this, "SOS", 20f, Ui.RED));
+        bar.setBackground(Ui.roundRect(0xFF1B1313, Ui.RED, 24, this));
+        bar.addView(Ui.caps(this, "SOS", 13f, Ui.RED));
         bar.addView(Ui.text(this, "torch and tone in Morse, plus a message ready to send",
-                14f, Ui.TEXT));
-        bar.addView(Ui.button(this, "OPEN THE DISTRESS PANEL", Ui.RED,
+                15f, Ui.TEXT));
+        bar.addView(Ui.action(this, "OPEN THE DISTRESS PANEL", Ui.RED,
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -175,10 +161,10 @@ public final class V2Activity extends Activity {
             return new View(this);
         }
         LinearLayout card = Ui.card(this, Ui.AMBER);
-        card.setBackground(Ui.roundRect(0xFF1A1408, Ui.AMBER, 14, this));
-        card.addView(Ui.caps(this, "RADIO LOCKED", 14f, Ui.AMBER));
-        card.addView(Ui.text(this, missing, 14f, Ui.TEXT));
-        card.addView(Ui.button(this, "ASK FOR IT NOW", Ui.AMBER, new View.OnClickListener() {
+        card.setBackground(Ui.roundRect(0xFF16130A, Ui.AMBER, 24, this));
+        card.addView(Ui.caps(this, "RADIO LOCKED", 13f, Ui.AMBER));
+        card.addView(Ui.text(this, missing, 15f, Ui.TEXT));
+        card.addView(Ui.action(this, "ASK FOR IT NOW", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Perms.ensureRadio(V2Activity.this);
@@ -200,17 +186,18 @@ public final class V2Activity extends Activity {
                 {"Settings", "app + data", "gear", "GREY"},
                 {"Medical", "9 protocols", "cross", "RED"},
                 {"Calculator", "water, power", "calc", "AMBER"},
-                {"Link", "radio, text", "link", "PURPLE"},
+                {"Link", "radio, text", "link", "VIOLET"},
                 {"Share", "hand it on", "share", "TEAL"},
                 {"Screens", "lock screen", "screen", "ORANGE"},
                 {"Library", "Kiwix books", "book", "GREEN"},
                 {"Journal", "sealed notes", "pen", "TAN"},
-                {"Maps", "own map files", "map", "BLUE"},
+                {"Maps", "own map files", "map", "SKY"},
                 {"Comms", "Briar, beacons", "talk", "PURPLE"},
                 {"Help", "what works", "question", "IVORY"}
         };
 
-        for (final String[] tile : tiles) {
+        for (int i = 0; i < tiles.length; i++) {
+            final String[] tile = tiles[i];
             View view = tile(tile[0], tile[1], icon(tile[2]), colour(tile[3]));
             view.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -222,7 +209,10 @@ public final class V2Activity extends Activity {
             params.width = 0;
             params.height = Ui.dp(this, 96);
             params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-            params.setMargins(Ui.dp(this, 4), Ui.dp(this, 4), Ui.dp(this, 4), Ui.dp(this, 4));
+            int column = i % 3;
+            int row = i / 3;
+            params.setMargins(column == 0 ? 0 : Ui.dp(this, 8), row == 0 ? 0 : Ui.dp(this, 8),
+                    0, 0);
             view.setLayoutParams(params);
             grid.addView(view);
         }
@@ -283,13 +273,14 @@ public final class V2Activity extends Activity {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setGravity(Gravity.CENTER_HORIZONTAL);
-        box.setPadding(Ui.dp(this, 5), Ui.dp(this, 10), Ui.dp(this, 5), Ui.dp(this, 8));
-        box.setBackground(Ui.roundRect(Ui.TILE, colour, 14, this));
+        box.setPadding(Ui.dp(this, 6), Ui.dp(this, 12), Ui.dp(this, 6), Ui.dp(this, 10));
+        box.setBackground(Ui.roundRect(colour == Ui.RED ? Ui.RED_PANEL : Ui.PANEL, colour,
+                24, this));
         box.addView(icon);
-        TextView heading = Ui.text(this, title, 18f, Ui.TEXT);
+        TextView heading = Ui.text(this, title, 16f, Ui.TEXT);
         heading.setGravity(Gravity.CENTER_HORIZONTAL);
         box.addView(heading);
-        TextView sub = Ui.text(this, subtitle, 13f, Ui.DIM);
+        TextView sub = Ui.text(this, subtitle, 13f, Ui.MUTED);
         sub.setGravity(Gravity.CENTER_HORIZONTAL);
         box.addView(sub);
         return box;
@@ -338,6 +329,12 @@ public final class V2Activity extends Activity {
         }
         if ("PURPLE".equals(name)) {
             return Ui.PURPLE;
+        }
+        if ("VIOLET".equals(name)) {
+            return Ui.VIOLET;
+        }
+        if ("SKY".equals(name)) {
+            return Ui.SKY;
         }
         if ("TEAL".equals(name)) {
             return Ui.TEAL;

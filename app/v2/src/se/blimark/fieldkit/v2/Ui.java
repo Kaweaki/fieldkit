@@ -25,22 +25,38 @@ import android.widget.TextView;
  */
 public final class Ui {
 
+    // Every value here was sampled from the shipped 2.8 build on a 1080x2340
+    // screen at 440 dpi, so the two apps cannot drift apart by eye.
     public static final int BG = 0xFF0B0E12;
-    public static final int TILE = 0xFF101620;
-    public static final int CARD = 0xFF12171F;
-    public static final int TEXT = 0xFFF2F4F7;
-    public static final int DIM = 0xFF9AA3AD;
-    public static final int FAINT = 0xFF6B7480;
+    public static final int PANEL = 0xFF151A21;
+    public static final int FIELD = 0xFF07090C;
+    public static final int CHIP = 0xFF1A2028;
+    public static final int BORDER = 0xFF272F3A;
+    public static final int TEXT = 0xFFE7EEF5;
+    public static final int MUTED = 0xFF8493A2;
+    public static final int DIM = 0xFF6C7A88;
     public static final int AMBER = 0xFFFFB000;
-    public static final int RED = 0xFFD05050;
-    public static final int GREEN = 0xFF4E9A6B;
-    public static final int BLUE = 0xFF4F7FD0;
-    public static final int TEAL = 0xFF3FA7A0;
-    public static final int PURPLE = 0xFF8B6FD0;
-    public static final int ORANGE = 0xFFD08040;
-    public static final int TAN = 0xFFC0A070;
-    public static final int IVORY = 0xFFC9C2A8;
-    public static final int GREY = 0xFF7A8189;
+
+    /** Tile borders, one per tile, in the order the shipped grid uses them. */
+    public static final int BLUE = 0xFF6E93B8;
+    public static final int GREY = 0xFF8A96A3;
+    public static final int RED = 0xFFC76B63;
+    public static final int GREEN = 0xFF78A67F;
+    public static final int TEAL = 0xFF5A9E94;
+    public static final int PURPLE = 0xFFA984A9;
+    public static final int ORANGE = 0xFFB78862;
+    public static final int TAN = 0xFFB39B6E;
+    public static final int IVORY = 0xFF8296A8;
+    public static final int VIOLET = 0xFF8A7FB8;
+    public static final int SKY = 0xFF6C8FC4;
+
+    /** The one tile V1 tints instead of leaving on the panel colour. */
+    public static final int RED_PANEL = 0xFF1B1313;
+
+    // Older names kept so the call sites keep reading the same.
+    public static final int TILE = PANEL;
+    public static final int CARD = PANEL;
+    public static final int FAINT = DIM;
 
     private Ui() {
     }
@@ -60,31 +76,65 @@ public final class Ui {
     /** Small letter-spaced caps, the style of every label in V1. */
     public static TextView caps(Context context, String value, float sizeSp, int colour) {
         TextView view = text(context, value.toUpperCase(), sizeSp, colour);
-        view.setLetterSpacing(0.12f);
+        view.setLetterSpacing(0.16f);
         view.setTypeface(view.getTypeface(), android.graphics.Typeface.BOLD);
         return view;
     }
 
+    /** The grey caps V1 puts above a section: "WHAT IT MAY USE", "USB - OTG". */
+    public static TextView label(Context context, String value) {
+        TextView view = caps(context, value, 12f, MUTED);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.topMargin = dp(context, 2);
+        view.setLayoutParams(params);
+        return view;
+    }
+
+    /** The screen title: V1's 30sp amber caps, sitting under the back pill. */
+    public static TextView title(Context context, String value, float sizeSp) {
+        TextView view = caps(context, value, sizeSp, AMBER);
+        view.setLetterSpacing(0.10f);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.topMargin = dp(context, 8);
+        view.setLayoutParams(params);
+        return view;
+    }
+
+    /** V1's way back: an outlined pill reading "FIELDKIT" or the section name. */
+    public static android.widget.Button backPill(Context context, String label, int colour,
+                                                 View.OnClickListener listener) {
+        android.widget.Button pill = pill(context, "\u2039  " + label, colour, 0, BORDER, 255,
+                listener);
+        pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+        return pill;
+    }
+
     public static TextView body(Context context, String value) {
         TextView view = text(context, value, 15f, TEXT);
-        view.setLineSpacing(dp(context, 3), 1f);
+        view.setLineSpacing(dp(context, 4), 1f);
         return view;
     }
 
     public static TextView note(Context context, String value) {
-        TextView view = text(context, value, 13f, DIM);
-        view.setLineSpacing(dp(context, 2), 1f);
+        TextView view = text(context, value, 14f, MUTED);
+        view.setLineSpacing(dp(context, 4), 1f);
         return view;
     }
 
-    /** The amber hairline under the header. */
+    /** V1's header rule: amber on the left, gone by the right edge. */
     public static View rule(Context context) {
         View view = new View(context);
-        view.setBackgroundColor(AMBER);
+        android.graphics.drawable.GradientDrawable line =
+                new android.graphics.drawable.GradientDrawable(
+                        android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                        new int[]{AMBER, 0x66FFB000, 0x00FFB000});
+        view.setBackground(line);
         LinearLayout.LayoutParams params =
                 new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
                         dp(context, 2));
-        params.topMargin = dp(context, 14);
+        params.topMargin = dp(context, 12);
         view.setLayoutParams(params);
         return view;
     }
@@ -98,6 +148,11 @@ public final class Ui {
     }
 
     /** A rounded panel with a coloured border, used for warnings and results. */
+    public static LinearLayout card(Context context) {
+        return card(context, BORDER);
+    }
+
+    /** A rounded panel with a coloured border: V1's 24dp corners, 16dp inside. */
     public static LinearLayout card(Context context, int border) {
         LinearLayout panel = new LinearLayout(context);
         panel.setOrientation(LinearLayout.VERTICAL);
@@ -105,11 +160,11 @@ public final class Ui {
         panel.setPadding(pad, pad, pad, pad);
         android.graphics.drawable.GradientDrawable shape =
                 new android.graphics.drawable.GradientDrawable();
-        shape.setColor(CARD);
-        shape.setCornerRadius(dp(context, 14));
-        shape.setStroke(dp(context, 2), border);
+        shape.setColor(PANEL);
+        shape.setCornerRadius(dp(context, 24));
+        shape.setStroke(dp(context, 1), border);
         panel.setBackground(shape);
-        panel.setLayoutParams(spaced(context, 14));
+        panel.setLayoutParams(spaced(context, 12));
         return panel;
     }
 
@@ -120,18 +175,48 @@ public final class Ui {
         return left;
     }
 
+    /**
+     * The secondary control: a thin outlined pill with amber caps, which is what
+     * V1 uses for "RESCAN THE PORT" and "OPEN THE ANDROID APP SETTINGS".
+     */
     public static android.widget.Button button(Context context, String label, int colour,
                                                View.OnClickListener listener) {
+        return pill(context, label, colour, 0, BORDER, (int) (0.82f * 255), listener);
+    }
+
+    /** The primary control: filled amber with near-black caps, as in V1. */
+    public static android.widget.Button action(Context context, String label,
+                                               View.OnClickListener listener) {
+        return action(context, label, AMBER, listener);
+    }
+
+    public static android.widget.Button action(Context context, String label, int fill,
+                                               View.OnClickListener listener) {
+        return pill(context, label, BG, fill, fill, 255, listener);
+    }
+
+    private static android.widget.Button pill(Context context, String label, int textColour,
+                                              int fill, int stroke, int strokeAlpha,
+                                              View.OnClickListener listener) {
         android.widget.Button button = new android.widget.Button(context);
-        button.setText(label);
+        button.setText(label.toUpperCase());
         button.setAllCaps(false);
-        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f);
-        button.setTextColor(colour);
-        button.setBackground(roundRect(0xFF161C24, colour, 12, context));
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+        button.setLetterSpacing(0.10f);
+        button.setTypeface(button.getTypeface(), android.graphics.Typeface.BOLD);
+        button.setTextColor(textColour);
+        button.setGravity(Gravity.CENTER);
+        button.setMinHeight(0);
+        button.setMinimumHeight(0);
+        button.setPadding(dp(context, 20), dp(context, 14), dp(context, 20), dp(context, 14));
+        android.graphics.drawable.GradientDrawable shape = roundRect(fill, stroke, 24, context);
+        shape.setStroke(dp(context, 1), Color.argb(strokeAlpha, Color.red(stroke),
+                Color.green(stroke), Color.blue(stroke)));
+        button.setBackground(shape);
         button.setOnClickListener(listener);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        params.topMargin = dp(context, 10);
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.topMargin = dp(context, 12);
         button.setLayoutParams(params);
         return button;
     }
@@ -151,14 +236,38 @@ public final class Ui {
         EditText edit = new EditText(context);
         edit.setHint(hint);
         edit.setText(value);
-        edit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f);
+        edit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f);
         edit.setTextColor(TEXT);
-        edit.setHintTextColor(FAINT);
+        edit.setHintTextColor(DIM);
         edit.setInputType(inputType);
-        edit.setBackground(roundRect(0xFF0E131A, 0xFF2A323C, 10, context));
-        edit.setPadding(dp(context, 12), dp(context, 10), dp(context, 12), dp(context, 10));
-        edit.setLayoutParams(spaced(context, 8));
+        edit.setBackground(roundRect(FIELD, BORDER, 12, context));
+        edit.setPadding(dp(context, 16), dp(context, 12), dp(context, 16), dp(context, 12));
+        edit.setLayoutParams(spaced(context, 6));
         return edit;
+    }
+
+    /** A label above a field, the way V1 labels every box it draws. */
+    public static LinearLayout fieldBlock(Context context, String label, EditText edit) {
+        LinearLayout block = new LinearLayout(context);
+        block.setOrientation(LinearLayout.VERTICAL);
+        block.addView(label(context, label));
+        block.addView(edit);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.topMargin = dp(context, 10);
+        block.setLayoutParams(params);
+        return block;
+    }
+
+    /** A tap-to-toggle chip, the shape V1 uses for its condition buttons. */
+    public static android.widget.TextView chip(Context context, String label, boolean on,
+                                               View.OnClickListener listener) {
+        android.widget.TextView view = text(context, label, 15f, on ? BG : TEXT);
+        view.setGravity(Gravity.CENTER);
+        view.setBackground(roundRect(on ? AMBER : CHIP, on ? AMBER : BORDER, 24, context));
+        view.setPadding(dp(context, 12), dp(context, 14), dp(context, 12), dp(context, 14));
+        view.setOnClickListener(listener);
+        return view;
     }
 
     public static EditText number(Context context, String hint, String value) {

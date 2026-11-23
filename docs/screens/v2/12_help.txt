@@ -1,0 +1,13 @@
+‹  FIELDKIT                              Button     x=  50- 373 y=  138-  264
+HELP                                     TextView   x=  50-1030 y=  286-  397
+What this phone can actually do, checked TextView   x=  50-1030 y=  397-  501
+THIS DEVICE                              TextView   x=  50-1030 y=  557-  605
+ANDROID   14 (API 34)                    TextView   x=  50-1030 y=  605-  675
+MODEL   unknown Android SDK built for x8 TextView   x=  50-1030 y=  675-  745
+TORCH   unavailable                      TextView   x=  50-1030 y=  745-  815
+COMPASS   present                        TextView   x=  50-1030 y=  815-  885
+FREE STORAGE   5570 MB                   TextView   x=  50-1030 y=  885-  955
+This phone reports no camera flash, so t TextView   x=  50-1030 y=  955- 1063
+WHAT EACH TILE REALLY DOES               TextView   x=  50-1030 y= 1063- 1111
+Profile computes water for your people a TextView   x=  50-1030 y= 1111- 2170
+WHAT THIS BUILD DOES NOT DO              TextView   x=  50-1030 y= 2170- 2208

@@ -177,6 +177,10 @@ is a placeholder:
 | Comms | opens Briar if it is installed, says so if it is not |
 | Help | this phone's real capabilities, and what the build does not do |
 
+How the design was matched to the shipped build, the paired screenshots taken on
+one API 34 device, and what is still open are in `docs/V2-SCREENS.md` and
+`docs/V2-HANDOFF.md`.
+
 The build has been run on the Android 10 phone it was written for and on
 Android 14 (API 34) in an emulator, which is where the Android 12+
 Bluetooth permission split, the dark splash screen and the lock-screen

@@ -1,0 +1,18 @@
+‹  FIELDKIT                              Button     x=  50- 373 y=  138-  264
+SETTINGS                                 TextView   x=  50-1030 y=  286-  397
+What the app knows about you. It never l TextView   x=  50-1030 y=  397-  501
+IDENTITY                                 TextView   x=  94- 986 y=  640-  684
+NAME                                     TextView   x=  94- 986 y=  718-  762
+HARALD BLIMARK                           EditText   x=  94- 986 y=  779-  904
+BLOOD TYPE                               TextView   x=  94- 986 y=  938-  982
+blood type                               EditText   x=  94- 986 y=  999- 1124
+ALLERGIES                                TextView   x=  94- 986 y= 1158- 1202
+allergies                                EditText   x=  94- 986 y= 1219- 1344
+MEDICINES                                TextView   x=  94- 986 y= 1378- 1422
+medicines                                EditText   x=  94- 986 y= 1439- 1564
+EMERGENCY CONTACT                        TextView   x=  94- 986 y= 1598- 1642
+emergency contact                        EditText   x=  94- 986 y= 1659- 1784
+HOME POSITION                            TextView   x=  50-1030 y= 1834- 1878
+Typed in once so daylight times work wit TextView   x=  50-1030 y= 1878- 1986
+latitude, e.g. 57.7089                   EditText   x=  50-1030 y= 2003- 2128
+longitude, e.g. 11.9746                  EditText   x=  50-1030 y= 2145- 2208

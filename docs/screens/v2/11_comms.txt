@@ -1,0 +1,8 @@
+‹  FIELDKIT                              Button     x=  50- 373 y=  138-  264
+COMMS                                    TextView   x=  50-1030 y=  286-  397
+What can carry a message when there is n TextView   x=  50-1030 y=  397-  453
+BRIAR                                    TextView   x=  50-1030 y=  509-  557
+Briar is not installed on this phone. It TextView   x=  50-1030 y=  557-  777
+WHAT THIS APP CAN CARRY ITSELF           TextView   x=  50-1030 y=  777-  825
+Bluetooth serial: short text to a paired TextView   x=  50-1030 y=  825- 1176
+There is no INTERNET permission in this  TextView   x=  50-1030 y= 1176- 1284

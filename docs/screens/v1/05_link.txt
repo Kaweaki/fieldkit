@@ -1,0 +1,19 @@
+‹  FIELDKIT                              Button     x=  44- 301 y=  121-  253
+LINK                                     TextView   x=  44- 959 y=  288-  384
+⋮                                        TextView   x= 959-1036 y=  286-  386
+what is plugged in, what is in the air   TextView   x=  44-1036 y=  386-  430
+USB - OTG                                TextView   x=  88- 992 y=  547-  585
+Identify and talk to what is on the cabl TextView   x=  88- 992 y=  585-  637
+No USB cable                             TextView   x=  88- 992 y=  637-  678
+Plug the phone into the PC by USB. Andro TextView   x=  88- 992 y=  695-  873
+RESCAN THE PORT                          Button     x=  88- 483 y=  873- 1005
+scanned 17:15:19   0 devices   no cable  TextView   x=  88- 992 y= 1038- 1077
+THIS PC                                  TextView   x=  88- 992 y= 1199- 1237
+Open a link a computer can use           TextView   x=  88- 992 y= 1237- 1289
+Plug the phone into the PC by USB. Andro TextView   x=  88- 992 y= 1289- 1371
+OPEN THE PC LINK                         Button     x=  88- 483 y= 1371- 1503
+Android does not expose the upstream PC' TextView   x=  88- 992 y= 1553- 1758
+BLUETOOTH                                TextView   x=  88- 992 y= 1880- 1918
+Scan, read services, send commands       TextView   x=  88- 992 y= 1918- 1970
+BLE and classic serial, no internet need TextView   x=  88- 992 y= 1970- 2011
+OPEN THE RADIO                           Button     x=  88- 992 y= 2050- 2182

@@ -1,0 +1,18 @@
+‹  FIELDKIT                              Button     x=  44- 301 y=  121-  253
+SHARE                                    TextView   x=  44-1036 y=  286-  382
+send the whole app, not a link           TextView   x=  44-1036 y=  382-  426
+HAND IT ON                               TextView   x=  88- 992 y=  538-  576
+FieldKit.apk - 164 kB, no internet neede TextView   x=  88- 992 y=  576-  673
+Bluetooth or Wi-Fi Direct. The saved cop TextView   x=  88- 992 y=  673-  784
+SHARE THE APK                            Button     x=  88- 992 y=  823-  955
+SAVE A COPY                              Button     x=  88- 388 y=  955- 1087
+METADATA - BEFORE IT LEAVES              TextView   x=  88- 992 y= 1242- 1280
+on - photos are re-encoded, so camera, d TextView   x=  88- 992 y= 1280- 1324
+Wipe metadata for this send              TextView   x=  88- 992 y= 1357- 1398
+off                                      Button     x=  88- 531 y= 1409- 1541
+on                                       Button     x= 548- 992 y= 1409- 1541
+Images: decoded and re-encoded, which re TextView   x=  88- 992 y= 1563- 1809
+ANY FILE                                 TextView   x=  88- 992 y= 1931- 1969
+Photos, notes, a saved map, a Kiwix inde TextView   x=  88- 992 y= 1969- 2021
+The system picker chooses what to send;  TextView   x=  88- 992 y= 2021- 2132
+PICK A FILE TO SEND                      Button     x=  88- 992 y= 2171- 2208

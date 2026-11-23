@@ -1,0 +1,50 @@
+‹  FIELDKIT                              Button     x=  44- 301 y=  121-  253
+CALCULATOR                               TextView   x=  44-1036 y=  286-  382
+ten sums that keep coming back           TextView   x=  44-1036 y=  382-  426
+01                                       TextView   x=  83- 158 y=  553-  607
+Chlorinate water                         TextView   x= 158- 874 y=  532-  588
+bleach drops per litre                   TextView   x= 158- 874 y=  588-  629
+☆                                        TextView   x= 874- 958 y=  535-  625
+›                                        TextView   x= 958-1003 y=  543-  617
+02                                       TextView   x=  83- 158 y=  738-  792
+Rehydration salts                        TextView   x= 158- 874 y=  717-  773
+WHO ORS, scaled to body weight           TextView   x= 158- 874 y=  773-  814
+☆                                        TextView   x= 874- 958 y=  720-  810
+›                                        TextView   x= 958-1003 y=  728-  802
+03                                       TextView   x=  83- 158 y=  923-  977
+Antenna length                           TextView   x= 158- 874 y=  902-  958
+wire lengths from a frequency            TextView   x= 158- 874 y=  958-  999
+☆                                        TextView   x= 874- 958 y=  905-  995
+›                                        TextView   x= 958-1003 y=  913-  987
+04                                       TextView   x=  83- 158 y= 1108- 1162
+Solar sizing                             TextView   x= 158- 874 y= 1087- 1143
+panel watts and battery amp-hours        TextView   x= 158- 874 y= 1143- 1184
+☆                                        TextView   x= 874- 958 y= 1090- 1180
+›                                        TextView   x= 958-1003 y= 1098- 1172
+05                                       TextView   x=  83- 158 y= 1293- 1347
+Concrete &amp; mortar                    TextView   x= 158- 874 y= 1272- 1328
+1:2:3 mixes by volume                    TextView   x= 158- 874 y= 1328- 1369
+☆                                        TextView   x= 874- 958 y= 1275- 1365
+›                                        TextView   x= 958-1003 y= 1283- 1357
+06                                       TextView   x=  83- 158 y= 1478- 1532
+Water to store                           TextView   x= 158- 874 y= 1457- 1513
+how much to keep, by profile             TextView   x= 158- 874 y= 1513- 1554
+☆                                        TextView   x= 874- 958 y= 1460- 1550
+›                                        TextView   x= 958-1003 y= 1468- 1542
+07                                       TextView   x=  83- 158 y= 1663- 1717
+Fuel mix                                 TextView   x= 158- 874 y= 1642- 1698
+2-stroke ratios and burn time            TextView   x= 158- 874 y= 1698- 1739
+☆                                        TextView   x= 874- 958 y= 1645- 1735
+›                                        TextView   x= 958-1003 y= 1653- 1727
+08                                       TextView   x=  83- 158 y= 1848- 1902
+Walking time                             TextView   x= 158- 874 y= 1827- 1883
+hours on foot, with ascent               TextView   x= 158- 874 y= 1883- 1924
+☆                                        TextView   x= 874- 958 y= 1830- 1920
+›                                        TextView   x= 958-1003 y= 1838- 1912
+09                                       TextView   x=  83- 158 y= 2033- 2087
+Food rations                             TextView   x= 158- 874 y= 2012- 2068
+kcal per day and grain to store          TextView   x= 158- 874 y= 2068- 2109
+☆                                        TextView   x= 874- 958 y= 2015- 2105
+›                                        TextView   x= 958-1003 y= 2023- 2097
+Daily water need                         TextView   x= 158- 874 y= 2197- 2208
+☆                                        TextView   x= 874- 958 y= 2200- 2208

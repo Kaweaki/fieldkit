@@ -1,0 +1,9 @@
+‹  FIELDKIT                              Button     x=  44- 301 y=  121-  253
+FIELD JOURNAL                            TextView   x=  44-1036 y=  286-  367
+timestamped notes - sealed on this phone TextView   x=  44-1036 y=  367-  411
+NEW ENTRY                                TextView   x=  88- 992 y=  523-  561
+What happened, where, what you did       TextView   x=  88- 992 y=  583-  624
+SEAL AND ADD                             Button     x=  88- 992 y=  905- 1037
+At rest: AES-256-GCM, key held by the An TextView   x=  88- 992 y= 1059- 1223
+no entries yet - the first line is the d TextView   x=  44-1036 y= 1306- 1350
+CLEAR THE WHOLE JOURNAL                  Button     x=  44- 619 y= 1350- 1482

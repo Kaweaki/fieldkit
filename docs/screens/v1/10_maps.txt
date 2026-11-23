@@ -1,0 +1,13 @@
+‹  FIELDKIT                              Button     x=  44- 301 y=  121-  253
+MAP                                      TextView   x=  44-1036 y=  286-  374
+your own tiles, straight from a file     TextView   x=  44-1036 y=  374-  418
+MAP FILE                                 TextView   x=  88- 992 y=  530-  568
+no file loaded                           TextView   x=  88- 992 y=  568-  612
+CHOOSE AN .MBTILES FILE                  Button     x=  88- 992 y=  651-  783
+LOAD DOWNLOAD/FIELDKIT.MBTILES           Button     x=  88- 795 y=  783-  915
+LOAD FROM THE APP FOLDER                 Button     x=  88- 671 y=  948- 1080
+fallback app: none - FieldKit keeps the  TextView   x=  88- 992 y= 1146- 1187
+CHOOSE A FALLBACK MAP APP                Button     x=  88- 700 y= 1187- 1319
+SEND THE CROSSHAIR THERE                 Button     x=  88- 671 y= 1352- 1484
+Raster MBTiles only (PNG or JPEG tiles i TextView   x=  88- 992 y= 1534- 1698
+THE MAP                                  TextView   x=  88- 992 y= 1820- 1858

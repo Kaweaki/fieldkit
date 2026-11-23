@@ -1,0 +1,27 @@
+FIELDKIT 2.9                             TextView   x=  50-1030 y=  105-  153
+FIELDKIT                                 TextView   x=  50-1030 y=  175-  336
+offline index + tools - tap a tile       TextView   x=  50-1030 y=  336-  392
+SOS                                      TextView   x=  94- 986 y=  508-  556
+torch and tone in Morse, plus a message  TextView   x=  94- 986 y=  556-  660
+OPEN THE DISTRESS PANEL                  Button     x=  94- 743 y=  693-  819
+RADIO LOCKED                             TextView   x=  94- 986 y=  940-  988
+Android 12 and later ask for Nearby devi TextView   x=  94- 986 y=  988- 1188
+ASK FOR IT NOW                           Button     x=  94- 526 y= 1221- 1347
+Profile                                  TextView   x=  67- 345 y= 1535- 1594
+body, water                              TextView   x=  67- 345 y= 1594- 1642
+Settings                                 TextView   x= 401- 679 y= 1535- 1594
+app + data                               TextView   x= 401- 679 y= 1594- 1642
+Medical                                  TextView   x= 735-1013 y= 1535- 1594
+9 protocols                              TextView   x= 735-1013 y= 1594- 1642
+Calculator                               TextView   x=  67- 345 y= 1821- 1880
+water, power                             TextView   x=  67- 345 y= 1880- 1928
+Link                                     TextView   x= 401- 679 y= 1821- 1880
+radio, text                              TextView   x= 401- 679 y= 1880- 1928
+Share                                    TextView   x= 735-1013 y= 1821- 1880
+hand it on                               TextView   x= 735-1013 y= 1880- 1928
+Screens                                  TextView   x=  67- 345 y= 2107- 2166
+lock screen                              TextView   x=  67- 345 y= 2166- 2208
+Library                                  TextView   x= 401- 679 y= 2107- 2166
+Kiwix books                              TextView   x= 401- 679 y= 2166- 2208
+Journal                                  TextView   x= 735-1013 y= 2107- 2166
+sealed notes                             TextView   x= 735-1013 y= 2166- 2208

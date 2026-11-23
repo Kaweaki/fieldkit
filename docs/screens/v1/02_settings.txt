@@ -1,0 +1,20 @@
+‹  FIELDKIT                              Button     x=  44- 301 y=  121-  253
+SETTINGS                                 TextView   x=  44-1036 y=  286-  382
+everything local, nothing leaves the pho TextView   x=  44-1036 y=  382-  426
+tap a section to open it - folds instead TextView   x=  44-1036 y=  488-  529
+OWNER                                    TextView   x=  88- 922 y=  622-  666
++                                        TextView   x= 922- 992 y=  607-  681
+PASSCODE                                 TextView   x=  88- 922 y=  840-  884
++                                        TextView   x= 922- 992 y=  825-  899
+PERMISSIONS                              TextView   x=  88- 922 y= 1058- 1102
++                                        TextView   x= 922- 992 y= 1043- 1117
+APPEARANCE                               TextView   x=  88- 922 y= 1276- 1320
++                                        TextView   x= 922- 992 y= 1261- 1335
+ADVANCED MODE                            TextView   x=  88- 922 y= 1494- 1538
++                                        TextView   x= 922- 992 y= 1479- 1553
+ACTIVE SURVEY                            TextView   x=  88- 922 y= 1712- 1756
++                                        TextView   x= 922- 992 y= 1697- 1771
+FIELDKIT PEERS                           TextView   x=  88- 922 y= 1930- 1974
++                                        TextView   x= 922- 992 y= 1915- 1989
+SAVED ENTITIES                           TextView   x=  88- 922 y= 2148- 2192
++                                        TextView   x= 922- 992 y= 2133- 2207

@@ -1,0 +1,26 @@
+‹  FIELDKIT                              Button     x=  44- 301 y=  121-  253
+PROFILE                                  TextView   x=  44-1036 y=  286-  367
+who is here - the calculators use every  TextView   x=  44-1036 y=  367-  411
+Name                                     TextView   x=  88- 992 y=  545-  586
+Person 1                                 EditText   x=  88- 992 y=  597-  693
+Body weight, kg                          TextView   x=  88- 992 y=  715-  756
+75                                       EditText   x=  88- 992 y=  767-  870
+Age in years - optional                  TextView   x=  88- 992 y=  892-  933
+Conditions - tap all that apply          TextView   x=  88- 992 y= 1080- 1121
+pregnant                                 Button     x=  88- 531 y= 1132- 1264
+breastfeeding                            Button     x= 548- 992 y= 1132- 1264
+diabetes                                 Button     x=  88- 531 y= 1275- 1407
+asthma                                   Button     x= 548- 992 y= 1275- 1407
+epilepsy                                 Button     x=  88- 531 y= 1418- 1550
+heart condition                          Button     x= 548- 992 y= 1418- 1550
+kidney disease                           Button     x=  88- 531 y= 1561- 1693
+immunosuppressed                         Button     x= 548- 992 y= 1561- 1693
+blood thinner                            Button     x=  88- 531 y= 1704- 1836
+mobility limit                           Button     x= 548- 992 y= 1704- 1836
+Allergies - tap all that apply           TextView   x=  88- 992 y= 1869- 1910
+penicillin                               Button     x=  88- 531 y= 1921- 2053
+sulfa drugs                              Button     x= 548- 992 y= 1921- 2053
+nuts                                     Button     x=  88- 531 y= 2064- 2196
+latex                                    Button     x= 548- 992 y= 2064- 2196
+insect stings                            Button     x=  88- 531 y= 2207- 2208
+food                                     Button     x= 548- 992 y= 2207- 2208

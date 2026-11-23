@@ -28,29 +28,40 @@ public final class Tools {
 
     public static LinearLayout screen(Activity activity, String title, String subtitle,
                                       final Runnable back) {
+        return screen(activity, title, subtitle, "FIELDKIT", back);
+    }
+
+    /**
+     * The frame every V1 screen shares: a back pill, the title in amber caps, one
+     * grey line of orientation, then the amber rule.
+     */
+    public static LinearLayout screen(Activity activity, String title, String subtitle,
+                                      String backLabel, final Runnable back) {
         LinearLayout column = Ui.column(activity);
         column.setBackground(Ui.background(activity));
-        column.addView(Ui.caps(activity, title, 22f, Ui.AMBER));
+        if (back != null) {
+            final Runnable target = back;
+            column.addView(Ui.backPill(activity, backLabel == null ? "FIELDKIT" : backLabel,
+                    Ui.AMBER, new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            target.run();
+                        }
+                    }));
+        }
+        column.addView(Ui.title(activity, title, 30f));
         if (subtitle != null && subtitle.length() > 0) {
-            column.addView(Ui.note(activity, subtitle));
+            column.addView(Ui.text(activity, subtitle, 15f, Ui.MUTED));
         }
         column.addView(Ui.rule(activity));
-        column.addView(Ui.spacer(activity, 4));
-        if (back != null) {
-            column.addView(Ui.button(activity, "\u2039  BACK", Ui.DIM, new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    back.run();
-                }
-            }));
-        }
+        column.addView(Ui.spacer(activity, 6));
         return column;
     }
 
     // ---- profile -----------------------------------------------------------
 
     public static View profile(final Activity activity, final Runnable back) {
-        LinearLayout column = screen(activity, "PROFILE", "Body and water, in the units you have.",
+        LinearLayout column = screen(activity, "PROFILE", "who is here - the calculators use every person",
                 back);
 
         final EditText weight = Ui.number(activity, "body weight, kg",
@@ -58,14 +69,16 @@ public final class Tools {
         final EditText people = Ui.number(activity, "people to supply",
                 Store.get(activity, "people", "1"));
         final EditText days = Ui.number(activity, "days", Store.get(activity, "days", "14"));
-        column.addView(weight);
-        column.addView(people);
-        column.addView(days);
+        LinearLayout form = Ui.card(activity);
+        form.addView(Ui.fieldBlock(activity, "Body weight, kg", weight));
+        form.addView(Ui.fieldBlock(activity, "People to supply", people));
+        form.addView(Ui.fieldBlock(activity, "Days to cover", days));
+        column.addView(form);
 
         final TextView result = Ui.body(activity, "");
         final TextView store = Ui.note(activity, "");
 
-        column.addView(Ui.button(activity, "WORK IT OUT", Ui.AMBER, new View.OnClickListener() {
+        column.addView(Ui.action(activity, "WORK IT OUT", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 double kg = value(weight, 75);
@@ -129,13 +142,15 @@ public final class Tools {
         final EditText offset = Ui.number(activity, "UTC offset in hours, e.g. 2",
                 Store.get(activity, "utc", ""));
 
-        column.addView(Ui.caps(activity, "Identity", 13f, Ui.AMBER));
-        column.addView(owner);
-        column.addView(blood);
-        column.addView(allergies);
-        column.addView(meds);
-        column.addView(contact);
-        column.addView(Ui.caps(activity, "Home position", 13f, Ui.AMBER));
+        LinearLayout identity = Ui.card(activity);
+        identity.addView(Ui.label(activity, "identity"));
+        identity.addView(Ui.fieldBlock(activity, "Name", owner));
+        identity.addView(Ui.fieldBlock(activity, "Blood type", blood));
+        identity.addView(Ui.fieldBlock(activity, "Allergies", allergies));
+        identity.addView(Ui.fieldBlock(activity, "Medicines", meds));
+        identity.addView(Ui.fieldBlock(activity, "Emergency contact", contact));
+        column.addView(identity);
+        column.addView(Ui.label(activity, "home position"));
         column.addView(Ui.note(activity, "Typed in once so daylight times work with the "
                 + "location permission refused. Leave blank if you would rather not."));
         column.addView(lat);
@@ -143,7 +158,7 @@ public final class Tools {
         column.addView(offset);
 
         final TextView saved = Ui.note(activity, "");
-        column.addView(Ui.button(activity, "SAVE", Ui.GREEN, new View.OnClickListener() {
+        column.addView(Ui.action(activity, "SAVE", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Store.put(activity, "owner", owner.getText().toString());
@@ -186,16 +201,16 @@ public final class Tools {
         LinearLayout column = screen(activity, "CALCULATOR",
                 "Every number below is computed here, with the units you actually carry.", back);
 
-        column.addView(Ui.caps(activity, "Disinfect water", 13f, Ui.AMBER));
+        column.addView(Ui.label(activity, "disinfect water"));
         final EditText litres = Ui.number(activity, "litres", "10");
         final EditText percent = Ui.number(activity, "bleach strength, %", "5");
         final EditText cloudy = Ui.number(activity, "cloudy? 1 yes, 0 no", "0");
-        column.addView(litres);
-        column.addView(percent);
-        column.addView(cloudy);
+        column.addView(Ui.fieldBlock(activity, "Litres to treat", litres));
+        column.addView(Ui.fieldBlock(activity, "Bleach strength, %", percent));
+        column.addView(Ui.fieldBlock(activity, "Cloudy water? 1 yes, 0 no", cloudy));
 
         final TextView clean = Ui.body(activity, "");
-        column.addView(Ui.button(activity, "BLEACH DOSE", Ui.TEAL, new View.OnClickListener() {
+        column.addView(Ui.action(activity, "BLEACH DOSE", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 double l = value(litres, 0);
@@ -221,7 +236,7 @@ public final class Tools {
 
         column.addView(Ui.caps(activity, "Rehydration drink", 13f, Ui.AMBER));
         final TextView ors = Ui.body(activity, "");
-        column.addView(Ui.button(activity, "ORS FOR 1 LITRE", Ui.GREEN, new View.OnClickListener() {
+        column.addView(Ui.action(activity, "ORS FOR 1 LITRE", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 ors.setText("1 litre of treated water\n6 level teaspoons of sugar\n"
@@ -233,17 +248,17 @@ public final class Tools {
         }));
         column.addView(ors);
 
-        column.addView(Ui.caps(activity, "Power", 13f, Ui.AMBER));
+        column.addView(Ui.label(activity, "power"));
         final EditText mah = Ui.number(activity, "battery, mAh", "10000");
         final EditText draw = Ui.number(activity, "draw, mA", "500");
         final EditText panel = Ui.number(activity, "solar panel, W", "20");
         final EditText sunHours = Ui.number(activity, "peak sun hours a day", "4");
-        column.addView(mah);
-        column.addView(draw);
-        column.addView(panel);
-        column.addView(sunHours);
+        column.addView(Ui.fieldBlock(activity, "Battery, mAh", mah));
+        column.addView(Ui.fieldBlock(activity, "Draw, mA", draw));
+        column.addView(Ui.fieldBlock(activity, "Solar panel, W", panel));
+        column.addView(Ui.fieldBlock(activity, "Peak sun hours a day", sunHours));
         final TextView powerOut = Ui.body(activity, "");
-        column.addView(Ui.button(activity, "POWER BUDGET", Ui.BLUE, new View.OnClickListener() {
+        column.addView(Ui.action(activity, "POWER BUDGET", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 double capacity = value(mah, 0);
@@ -318,8 +333,8 @@ public final class Tools {
     };
 
     public static View medical(final Activity activity, final Runnable back) {
-        LinearLayout column = screen(activity, "MEDICAL",
-                "Nine field protocols, written to be read while your hands are shaking.", back);
+        LinearLayout column = screen(activity, "EMERGENCY", "find the line that matches, tap it, read it",
+                "ALL TOOLS", back);
 
         final TextView body = Ui.body(activity, "");
         body.setPadding(0, Ui.dp(activity, 12), 0, Ui.dp(activity, 8));
@@ -342,7 +357,7 @@ public final class Tools {
         column.addView(Ui.body(activity, lines.length == 0
                 ? "Nothing filled in yet. Settings holds the fields."
                 : Ice.summary(lines)));
-        column.addView(Ui.button(activity, "PUT THIS ON THE LOCK SCREEN", Ui.AMBER,
+        column.addView(Ui.action(activity, "PUT THIS ON THE LOCK SCREEN",
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {

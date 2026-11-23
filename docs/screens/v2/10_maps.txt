@@ -1,0 +1,5 @@
+‹  FIELDKIT                              Button     x=  50- 373 y=  138-  264
+MAP                                      TextView   x=  50-1030 y=  286-  397
+Pick an .mbtiles file and this screen te TextView   x=  50-1030 y=  397-  501
+CHOOSE A MAP FILE                        Button     x=  50- 555 y=  590-  716
+This build does not draw tiles. It opens TextView   x=  50-1030 y=  772-  992

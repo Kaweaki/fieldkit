@@ -1,0 +1,15 @@
+‹  ALL TOOLS                             Button     x=  50- 413 y=  138-  264
+EMERGENCY                                TextView   x=  50-1030 y=  286-  397
+find the line that matches, tap it, read TextView   x=  50-1030 y=  397-  453
+SEVERE BLEEDING                          Button     x=  50- 513 y=  542-  668
+NOT BREATHING                            Button     x=  50- 478 y=  701-  827
+CHOKING, ADULT                           Button     x=  50- 488 y=  860-  986
+BURNS                                    Button     x=  50- 293 y= 1019- 1145
+HYPOTHERMIA                              Button     x=  50- 447 y= 1178- 1304
+HEAT STROKE                              Button     x=  50- 430 y= 1337- 1463
+BROKEN BONE                              Button     x=  50- 435 y= 1496- 1622
+DEHYDRATION                              Button     x=  50- 437 y= 1655- 1781
+FEVER IN THE FIELD                       Button     x=  50- 548 y= 1814- 1940
+ICE CARD                                 TextView   x=  50-1030 y= 2051- 2099
+Nothing filled in yet. Settings holds th TextView   x=  50-1030 y= 2099- 2155
+PUT THIS ON THE LOCK SCREEN              Button     x=  50- 783 y= 2188- 2208

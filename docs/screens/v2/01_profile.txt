@@ -1,0 +1,11 @@
+‹  FIELDKIT                              Button     x=  50- 373 y=  138-  264
+PROFILE                                  TextView   x=  50-1030 y=  286-  397
+who is here - the calculators use every  TextView   x=  50-1030 y=  397-  453
+BODY WEIGHT, KG                          TextView   x=  94- 986 y=  620-  664
+75                                       EditText   x=  94- 986 y=  681-  806
+PEOPLE TO SUPPLY                         TextView   x=  94- 986 y=  840-  884
+1                                        EditText   x=  94- 986 y=  901- 1026
+DAYS TO COVER                            TextView   x=  94- 986 y= 1060- 1104
+14                                       EditText   x=  94- 986 y= 1121- 1246
+WORK IT OUT                              Button     x=  50- 418 y= 1323- 1449
+Boil time assumes ground below 2000 m. W TextView   x=  50-1030 y= 1557- 1721

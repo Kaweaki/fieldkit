@@ -1,0 +1,8 @@
+‹  FIELDKIT                              Button     x=  44- 301 y=  121-  253
+SCREENS                                  TextView   x=  44-1036 y=  286-  382
+your night, written on the lock screen   TextView   x=  44-1036 y=  382-  426
+NIGHTLY ROUTINE - ONE THING PER LINE     TextView   x=  44-1036 y=  504-  545
+18:00  water and food&#10;19:00  feed th EditText   x=  44-1036 y=  562-  940
+SET AS LOCK SCREEN                       Button     x=  44-1036 y=  979- 1111
+SET HOME: CAMPFIRE                       Button     x=  44- 497 y= 1111- 1243
+The lock screen is 1080 x 2340: white ty TextView   x=  44-1036 y= 1315- 1479

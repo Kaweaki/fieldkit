@@ -1,0 +1,4 @@
+Kiwix is not installed                   TextView   x= 137- 943 y=  895-  969
+FieldKit is an index, not an archive: wi TextView   x=  71-1009 y=  991- 1258
+NOT NOW                                  Button     x= 338- 582 y= 1269- 1418
+DOWNLOAD KIWIX                           Button     x= 582- 976 y= 1269- 1418

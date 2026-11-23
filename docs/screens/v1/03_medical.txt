@@ -1,0 +1,28 @@
+‹  ALL TOOLS                             Button     x=  44- 338 y=  121-  253
+EMERGENCY                                TextView   x=  44-1036 y=  286-  374
+find the line that matches, tap it, read TextView   x=  44-1036 y=  374-  418
+IF YOU SEE                               TextView   x=  77- 917 y=  530-  568
+OPEN                                     TextView   x= 917-1003 y=  530-  568
+Not breathing, no pulse                  TextView   x=  83- 897 y=  619-  666
+› CPR                                    TextView   x= 897- 997 y=  623-  662
+Bleeding that will not stop              TextView   x=  83- 813 y=  716-  763
+› BLEEDING                               TextView   x= 813- 997 y=  720-  759
+Blue lips, cannot speak                  TextView   x=  83- 822 y=  813-  860
+› CHOKING                                TextView   x= 822- 997 y=  817-  856
+Burn or scalded skin                     TextView   x=  83- 857 y=  910-  957
+› BURNS                                  TextView   x= 857- 997 y=  914-  953
+Cold, shivering, drowsy                  TextView   x=  83- 742 y= 1007- 1054
+› HYPOTHERMIA                            TextView   x= 742- 997 y= 1011- 1050
+Hot, confused, dry skin                  TextView   x=  83- 879 y= 1104- 1151
+› HEAT                                   TextView   x= 879- 997 y= 1108- 1147
+Pale, clammy, fast pulse                 TextView   x=  83- 856 y= 1201- 1248
+› SHOCK                                  TextView   x= 856- 997 y= 1205- 1244
+Deformed or unstable limb                TextView   x=  83- 876 y= 1298- 1345
+› BONE                                   TextView   x= 876- 997 y= 1302- 1341
+Labour, birth under way                  TextView   x=  83- 868 y= 1395- 1442
+› BIRTH                                  TextView   x= 868- 997 y= 1399- 1438
+Swollen face or throat                   TextView   x=  83- 825 y= 1492- 1539
+› ALLERGY                                TextView   x= 825- 997 y= 1496- 1535
+No ambulance is coming. These are field  TextView   x=  44-1036 y= 1614- 1737
+NOT BREATHING - CPR                      TextView   x= 154- 992 y= 1783- 1835
+1. Shout for help. Tap the shoulders and TextView   x=  88- 992 y= 1864- 2208

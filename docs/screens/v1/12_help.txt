@@ -1,0 +1,9 @@
+‹  FIELDKIT                              Button     x=  44- 301 y=  121-  253
+HELP                                     TextView   x=  44-1036 y=  286-  382
+what this kit does, in plain words       TextView   x=  44-1036 y=  382-  426
+WHAT THIS IS                             TextView   x=  88- 992 y=  538-  576
+FieldKit is a quick index and a tool set TextView   x=  88- 992 y=  576- 1295
+BEFORE THE FIRST TRIP                    TextView   x=  88- 992 y= 1417- 1455
+Download content while you still have a  TextView   x=  88- 992 y= 1455- 2030
+WHAT IT RUNS ON                          TextView   x=  88- 992 y= 2152- 2190
+Any phone on Android 5.0 or later, inclu TextView   x=  88- 992 y= 2190- 2208
