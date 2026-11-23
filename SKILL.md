@@ -6,8 +6,9 @@ description: Build, restyle and verify a self-contained offline Android app (a "
 # FieldKit: a no-gradle offline Android app
 
 A compact recipe for a single-app offline toolkit: plain Java, framework APIs
-only, every view built in code, no `R.java`, no AndroidX, no `INTERNET`
-permission, no background services. Everything here is reusable for any app that
+only, every view built in code, no AndroidX, no Play services, no background
+services. `INTERNET` appears for one reason only — the opt-in LAN peer socket in
+section 11 — so never describe the app as having no internet permission. Everything here is reusable for any app that
 has to be assembled with raw SDK tools and proven on a real phone over a cable.
 
 ## 1. Toolchain: aapt2 + javac + d8, no gradle
@@ -84,6 +85,12 @@ USB host:
 
 Bluetooth:
 
+- With a `targetSdk` of 31 or higher, scanning needs `BLUETOOTH_SCAN`, connecting
+  needs `BLUETOOTH_CONNECT` and becoming discoverable needs `BLUETOOTH_ADVERTISE`.
+  Declare all three, cap `BLUETOOTH` and `BLUETOOTH_ADMIN` at
+  `android:maxSdkVersion="30"`, and ask for the new pair at runtime. Forget them
+  and every radio screen fails on Android 12+ with a `SecurityException` and no
+  visible reason; `tools/apkcheck.py` exists to catch exactly that.
 - Run `BluetoothLeScanner` and register the classic `ACTION_FOUND` receiver at
   the same time, dedupe by MAC into one model.
 - OUI tables are a static slice; randomised addresses defeat them. Fall back to
@@ -168,12 +175,24 @@ do the frequency/channel arithmetic - and say in the UI why.
   values when the passcode is set and the process is locked.
 - `setInt(viewId, "setBackgroundColor", colour)` works from `RemoteViews`;
   colours from a runtime palette apply without new resources.
-- Ship one universal APK: `minSdkVersion 21`, no AndroidX, no Play services, no
-  `INTERNET`, and guard post-21 APIs with `Build.VERSION.SDK_INT`. That covers
-  AOSP, GrapheneOS, LineageOS, OxygenOS, One UI and the rest.
-- Non-Android Linux phones (Ubuntu Touch) cannot install an APK; say so plainly
-  instead of implying the APK is universal, and treat a native port as a
-  separate app that would share the same data model.
+- Ship one universal APK: no native code, no AndroidX, no Play services, and
+  guard post-21 APIs with `Build.VERSION.SDK_INT`. That covers AOSP, GrapheneOS,
+  LineageOS, OxygenOS, One UI, Android Go and Chromebooks.
+- `minSdkVersion 21` reaches 99.8% of active devices and 24 reaches 99.5%. Keep
+  21 only if the pre-keystore crypto path (PBKDF2 from the passcode, API 21-22)
+  is tested on a real Android 5 phone; otherwise raise the floor and delete it.
+- `targetSdkVersion` is a publishing decision, not a compatibility one: Play has
+  refused new apps and updates below API 36 since 31 Aug 2026, and hides apps
+  below 35 from new users on newer Android. Sideload, F-Droid and IzzyOnDroid do
+  not care. Targeting 35 or higher also turns on edge-to-edge, so re-check every
+  full-screen layout's insets.
+- Non-Android Linux phones (Ubuntu Touch) cannot install an APK; Waydroid on
+  Halium 9+ runs it. iOS, KaiOS and HarmonyOS NEXT cannot run an APK at all, and
+  Windows 11's Android subsystem is gone. Say that plainly instead of implying
+  the APK is universal, and treat a native port as a separate app sharing the
+  same data model.
+- Run `py tools/apkcheck.py <apk>` before calling a build done. It reads the
+  binary manifest and fails on the permissions Android 12+ actually requires.
 
 ## 9. Honesty rules that make the app trustworthy
 
@@ -219,8 +238,9 @@ do the frequency/channel arithmetic - and say in the UI why.
   `postInvalidate` looked correct but never repainted inside a ScrollView;
   256 px PNG decode is cheap enough to block for.
 - Add a crosshair, scale bar (`156543.03392 * cos(lat) / 2^z`), GPS dot and
-  labelled waypoint pins. Public Download may be permission-restricted under a
-  modern targetSdk - also offer an app-folder import path that needs no grant.
+  labelled waypoint pins. Import with `ACTION_OPEN_DOCUMENT` and copy the file
+  into app storage; a storage permission is a no-op under scoped storage, so the
+  app-folder path is a fallback, not the answer.
 
 ## 13. Additive health data and advanced protocol sets
 
@@ -245,6 +265,9 @@ do the frequency/channel arithmetic - and say in the UI why.
 
 - Manifest: `allowBackup=false`, `usesCleartextTraffic=false`, no exported
   components except the launcher and widget, no WebView or JavaScript bridge.
+  Run `py tools/apkcheck.py <apk>` and fix every FAIL before shipping: it checks
+  the target API level, the Bluetooth split, dead storage permissions, exported
+  components, backup policy, native code and the signing certificate.
 - Grep for `Runtime.exec`, raw SQL concatenation, path traversal in providers.
 - Gate sensitive screens in both the tile handler and the activity itself; a
   USB descriptor view counts as sensitive when a passcode is set.

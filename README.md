@@ -1,5 +1,10 @@
 # FieldKit
 
+> **Branch `v2`.** Prepares the next release (app 2.7, versionCode 18): the
+> permission and target-SDK fixes, a licence, a manifest contract check and a
+> test plan. It is additive and reversible — see
+> [`docs/RESTORE.md`](docs/RESTORE.md). `main` still holds the released 2.6 tree.
+
 A single, self-contained Android app for a phone that works without a network: an
 eleven-tile menu, wallpapers drawn on the device, USB and Bluetooth tooling,
 survival calculators, a party-aware profile store, a passcode lock and a share
@@ -15,6 +20,13 @@ This repository holds the **build and code process documentation**, the
 | [`FIELDKIT-BUILD-PROCESS.txt`](FIELDKIT-BUILD-PROCESS.txt) | How the app is put together, environment, source layout, every screen's behaviour, the security review, the checks run for each version (2.1 to 2.6) and the known limits |
 | [`SKILL.md`](SKILL.md) | The reusable build skill: `aapt2` + `javac` + `d8` with no gradle, screens without layouts, runtime-drawn wallpapers, USB/BLE identification, passcode handling, adb verification, AES vaults, MBTiles rendering, Kiwix deep links |
 | [`dist/FieldKit-2.6.apk`](dist/FieldKit-2.6.apk) | The signed 2.6 build (versionCode 17) |
+| [`LICENSE`](LICENSE) | MIT |
+| [`app/AndroidManifest.xml`](app/AndroidManifest.xml) | The manifest as 2.7 should read, with every change marked |
+| [`app/build.sh`](app/build.sh) | The build in one command, transcribed from the process document |
+| [`tools/apkcheck.py`](tools/apkcheck.py) | Parses an APK's binary manifest and checks the compatibility contract |
+| [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md) | What runs where, measured from the APK |
+| [`docs/TEST-PLAN.md`](docs/TEST-PLAN.md) | The four layers that would prove a release works |
+| [`docs/RESTORE.md`](docs/RESTORE.md) | How to go back |
 
 ## Download and install
 
@@ -25,9 +37,11 @@ on the phone or sideload it:
 adb install -r FieldKit-2.6.apk
 ```
 
-On a locked-down device a fresh package can be refused with
-`INSTALL_FAILED_VERIFICATION_FAILURE`. Read the current value first, turn the
-verifier off, install, then restore it:
+On a phone with Play Protect a sideloaded APK usually gets a scan prompt, not a
+refusal; install after checking the SHA-256 above.
+`INSTALL_FAILED_VERIFICATION_FAILURE` is a different, rarer case where the
+package verifier rejects the signature. The workaround weakens the whole device,
+so use it only on a test phone, note the old value first and put it back:
 
 ```
 adb shell settings get global package_verifier_enable      # note the value
@@ -37,7 +51,11 @@ adb shell settings put global package_verifier_enable <old value>
 ```
 
 The build is signed with a debug keystore, so updating over another signature
-fails; uninstall the old copy first in that case.
+fails; uninstall the old copy first in that case. Installing from a computer
+with `adb install` normally needs no setting changed.
+
+The 2.6 build cannot use its radio screens on Android 12 or newer; the cause and
+the fix are in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
 ## Build facts
 
@@ -53,12 +71,27 @@ Verified from the published binary:
 | APK size | 156,285 bytes |
 | SHA-256 | `d93c20c6e133485b609b853ae5d2df3beda2bbd77e370fd0bdfcd17edf560835` |
 | MD5 | `77be033952895e42b42ce6e98e77d09e` |
+| Native libraries | none: one APK for ARM, ARM64, x86 and x86_64, Chromebooks included |
+| Exported components | `MainActivity` and `FieldKitWidget` only |
+| Signing certificate | `CN=Android Debug` (development only) |
 
 Verify a download with:
 
 ```
 sha256sum FieldKit-2.6.apk
 ```
+
+## Checking a build
+
+```console
+$ py tools/apkcheck.py dist/FieldKit-2.6.apk
+```
+
+It parses the APK's binary manifest, without an SDK or a device, and reports
+what the build gets wrong. On 2.6 that is three failures — target API level,
+Bluetooth permissions, storage permissions — and two warnings. After 2.7 it must
+report none, and `app/build.sh` runs it before an APK counts as finished. The
+reasoning behind each check is in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
 ## Build from source
 
@@ -84,21 +117,34 @@ Use build-tools 35.0.0: 34's `d8` crashes on this source set.
 
 ## Compatibility
 
-One APK, plain framework Java, no AndroidX, no Google Play services. It installs
-on AOSP, GrapheneOS, LineageOS, OxygenOS, One UI and the rest of Android 5.0+.
-Calls that need a newer API are behind `Build.VERSION.SDK_INT` checks. Ubuntu
-Touch and other non-Android Linux phones cannot install an APK; Waydroid can run
-this one.
+One APK, plain framework Java, no AndroidX, no Play services and no native
+code, so it runs on ARM, ARM64, x86 and x86_64: phones, tablets, Android Go
+devices and Chromebooks. `minSdkVersion 21` reaches 99.8% of active Android
+devices; the practical floor is Android 7.1, because Library and Maps hand off to
+Kiwix and a map app that require it. Ubuntu Touch and other Linux phones cannot
+install an APK — Waydroid on Halium 9+ runs this one. iOS, KaiOS and HarmonyOS
+NEXT cannot run an APK at all, and Windows 11's Android subsystem was retired in
+March 2025.
+
+The matrix, the numbers and their sources are in
+[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
 ## Known limits
 
 Stated in the app itself, not hidden here: there is no API to retune the phone's
 own FM transmitter (the radio screen shows real radio state and channel
 arithmetic instead), randomised Bluetooth addresses defeat OUI lookup (those
-rows are marked as guesses), USB serial needs an OTG adapter and a CDC-ACM or
-CP210x bridge, and the app-level passcode is not disk encryption.
+  rows are marked as guesses), USB serial needs an OTG adapter and a CDC-ACM or
+  CP210x bridge, and the app-level passcode is not disk encryption.
+- Radio, BLE, Serial and PC link fail on Android 12+ in 2.6: the manifest
+declares no `BLUETOOTH_SCAN` or `BLUETOOTH_CONNECT`, and nothing in the app can
+request a permission it never declared. Fixed in `app/AndroidManifest.xml`.
+- `READ`/`WRITE_EXTERNAL_STORAGE` grant nothing under scoped storage, which is
+why the Download import was recorded as refused. It is an app bug, not a
+platform limit; the fix is a document picker.
 
 ## Licence
 
-No licence has been chosen for this repository yet, so the default applies: all
-rights reserved.
+MIT — see [`LICENSE`](LICENSE). Chosen so the source can be rebuilt, forked,
+translated and ported, and so F-Droid and IzzyOnDroid can carry it; swap in
+GPL-3.0 if derivatives must stay open.

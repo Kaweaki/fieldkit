@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FieldKit manifest as release 2.7 should read.
+
+  This is a patch reference for the source tree, not a standalone build: the
+  app's res/ files (the launcher vector, widget.xml, widget_info.xml and the
+  theme) live with the Java source and are not in this repository. Diffs from
+  the shipped 2.6 manifest are marked V2 below.
+
+  Version code and name are passed to aapt2 by app/build.sh, so this file
+  carries no version attributes and no <uses-sdk>: the build flags own them.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="se.blimark.fieldkit">
+
+    <!-- Wallpaper is drawn at runtime and installed through WallpaperManager. -->
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
+
+    <!-- USB host is optional: no device is required to install the app. -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+
+    <!-- V2: the legacy pair only exists on Android 11 and below. Without the
+         cap, Android 12+ keeps granting them and the app never asks for the
+         permissions the platform actually checks. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+
+    <!-- V2: required for every radio screen when targetSdk >= 31. Scanning,
+         connecting and becoming discoverable are three separate grants since
+         Android 12. Without SCAN and CONNECT the 2.6 build throws
+         SecurityException on startScan/startDiscovery/connectGatt, and nothing
+         in the UI explains why.
+
+         No usesPermissionFlags="neverForLocation": the survey records BSSIDs and
+         the peer screen reads a GPS fix, so the app does derive location and
+         must keep declaring location honestly. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+
+    <!-- Location: Wi-Fi scan results on Android 6-12, GPS fixes for peers and
+         the map. Needed on every version, so no maxSdkVersion. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <!-- Multicast lock, for the UDP peer beacon. -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- LAN peers only: a broadcast socket on 47777, no remote address, no
+         cloud. Every document and the in-app help must say so. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 13+ splits Wi-Fi scan results out of location. -->
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
+
+    <!-- V2: READ_EXTERNAL_STORAGE and WRITE_EXTERNAL_STORAGE are gone. Under
+         scoped storage (targetSdk >= 30) neither grants anything, which is why
+         the MBTiles import from Download "was refused". Import with
+         ACTION_OPEN_DOCUMENT and copy the bytes into app storage instead; the
+         document picker needs no permission on any version. -->
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+        <package android:name="org.kiwix.kiwixmobile" />
+        <package android:name="org.kiwix.kiwixmobile.standalone" />
+    </queries>
+
+    <!-- V2: keep whatever theme resource your res/values defines. The shipped
+         2.6 APK points at one that is not part of this repository, so it is
+         left out here rather than guessed. -->
+    <application
+        android:allowBackup="false"
+        android:hardwareAccelerated="true"
+        android:icon="@drawable/ic_launcher"
+        android:label="FieldKit"
+        android:usesCleartextTraffic="false">
+
+        <activity
+            android:name="se.blimark.fieldkit.MainActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="true"
+            android:label="FieldKit">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name="se.blimark.fieldkit.EmergencyActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="Emergency" />
+        <activity android:name="se.blimark.fieldkit.ToolActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="FieldKit" />
+        <activity android:name="se.blimark.fieldkit.UnlockActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="Locked" />
+        <activity android:name="se.blimark.fieldkit.ToolsActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="Calculator" />
+        <activity android:name="se.blimark.fieldkit.ShareActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="Share" />
+        <activity android:name="se.blimark.fieldkit.SettingsActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="Settings" />
+        <activity android:name="se.blimark.fieldkit.AdvActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="Radio advanced" />
+        <activity android:name="se.blimark.fieldkit.LinkActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="Link" />
+        <activity android:name="se.blimark.fieldkit.UsbActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="USB" />
+        <activity android:name="se.blimark.fieldkit.BtActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="Radio" />
+        <activity android:name="se.blimark.fieldkit.GattActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="BLE" />
+        <activity android:name="se.blimark.fieldkit.SppActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="Serial" />
+        <activity android:name="se.blimark.fieldkit.PcLinkActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="PC link" />
+        <activity android:name="se.blimark.fieldkit.HelpActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="Help" />
+        <activity android:name="se.blimark.fieldkit.ConsentActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="Permissions" />
+        <activity android:name="se.blimark.fieldkit.IntroActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="FieldKit intro" />
+        <activity android:name="se.blimark.fieldkit.LibraryActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="Library" />
+        <activity android:name="se.blimark.fieldkit.PeerActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="Peers" />
+        <activity android:name="se.blimark.fieldkit.RosterActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="Saved entities" />
+        <activity android:name="se.blimark.fieldkit.IntelActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="Survey" />
+        <activity android:name="se.blimark.fieldkit.MapActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="Map" />
+        <activity android:name="se.blimark.fieldkit.WallpaperActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="Screens" />
+        <activity android:name="se.blimark.fieldkit.ProfileActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" android:label="Profile" />
+
+        <receiver
+            android:name="se.blimark.fieldkit.FieldKitWidget"
+            android:exported="true"
+            android:label="FieldKit">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info" />
+        </receiver>
+
+        <provider
+            android:name="se.blimark.fieldkit.ApkProvider"
+            android:authorities="se.blimark.fieldkit.share"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+    </application>
+</manifest>

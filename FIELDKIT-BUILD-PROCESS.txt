@@ -554,3 +554,83 @@ and a toast if the installed build does not answer it.
   geo intent was accepted, but the final point rendering was not inspected.
 - App-level saved devices are a convenience, not evidence of identity: a MAC can
   be randomised, and the OUI guess is explicitly a guess.
+
+--------------------------------------------------------------------------------
+## 10. Version 2.7 - the V2 audit
+
+Section 9 was written from the phone the build was tested on. Reading the signed
+APK instead of the source found three things that phone could not show. Each one
+is a build fact, reproducible with:
+
+    py tools/apkcheck.py dist/FieldKit-2.6.apk
+
+### What the 2.6 APK actually declares
+
+minSdk 21, targetSdk 34, 24 activities, 13 permissions, no native libraries,
+signed CN=Android Debug. Permissions: SET_WALLPAPER, BLUETOOTH, BLUETOOTH_ADMIN,
+ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, ACCESS_WIFI_STATE,
+CHANGE_WIFI_STATE, CHANGE_WIFI_MULTICAST_STATE, ACCESS_NETWORK_STATE, INTERNET,
+NEARBY_WIFI_DEVICES, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE.
+
+### 10.1 Bluetooth is dead on Android 12+
+
+The manifest declares BLUETOOTH and BLUETOOTH_ADMIN but not BLUETOOTH_SCAN or
+BLUETOOTH_CONNECT, and the dex never references either name. With targetSdk 34,
+Android 12+ requires the new pair; startScan, startDiscovery, connectGatt and
+listenUsingRfcommWithServiceRecord all fail. That is Radio, BLE, Serial, PC link
+and the BLE half of the survey, on 77.8% of active devices. The test phone was
+on an older release, which is why section 9 records these as working.
+
+Fix: declare SCAN, CONNECT and ADVERTISE; cap the legacy pair at
+maxSdkVersion="30"; request the new pair at runtime only when SDK_INT >= 31.
+See app/AndroidManifest.xml.
+
+### 10.2 The storage permissions grant nothing
+
+READ_EXTERNAL_STORAGE and WRITE_EXTERNAL_STORAGE are no-ops from API 30 for an
+app targeting 34, and the dex contains no ACTION_OPEN_DOCUMENT. The "public
+Download was refused" limit in section 7.3 is therefore an app bug: the file is
+opened by path, the platform is not refusing a grant it never needed.
+
+Fix: ACTION_OPEN_DOCUMENT, copy the stream into app storage, keep the app-folder
+path as a fallback. Drop both permissions.
+
+### 10.3 The build cannot be published to Google Play
+
+Play requires targetSdk 36 for new apps and updates since 31 Aug 2026, and 35
+for an existing app to stay visible to new users; an app targeting 34 is only
+offered to devices at or below API 34. Raising the target turns on edge-to-edge
+at 35, so the full-screen layouts need their insets checked. Sideload, F-Droid
+and IzzyOnDroid are unaffected.
+
+### 10.4 Documentation drift found in the same pass
+
+- SKILL.md said the app has no INTERNET permission. It has had one since the
+  peer socket landed in 2.3; the help text was already corrected, the skill was
+  not.
+- "Android 5.0 and later" is true about installing and misleading about use:
+  Kiwix, which Library depends on, supports Android 7.1-15.
+- "43 classes" counts top-level classes; the dex has 247 including nested ones.
+
+### 10.5 What 2.7 changes
+
+| Change | Where | Size effect |
+| --- | --- | --- |
+| BLUETOOTH_SCAN/CONNECT/ADVERTISE, legacy capped at 30 | manifest + runtime request | +1 KB |
+| targetSdk 36, edge-to-edge retest | build flags + layouts | none |
+| SAF import, storage permissions removed | MapActivity + manifest | -2 permissions |
+| release keystore for shipped builds | build script | none |
+| MIT licence, source published | repository | enables F-Droid, forks, ports |
+| manifest contract check in the build | tools/apkcheck.py | none |
+
+Everything on that list is either neutral or negative in APK size. The features
+worth adding next (torch and SOS, compass and sun times, an ICE card on the lock
+wallpaper, a battery budget, FieldKit-to-FieldKit text over the existing SPP
+code, one-file JSON export) are 1-4 KB each and need no new permission.
+
+### 10.6 Not done in this branch
+
+The Java source is still not in the repository, so 2.7 cannot be built here and
+nothing in docs/TEST-PLAN.md beyond layer 0 has been run. The manifest, build
+script, checker and plan are committed so that the source drop is the only
+remaining step.
