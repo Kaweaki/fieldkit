@@ -497,6 +497,13 @@ public final class Ui {
         return view;
     }
 
+    /** Switches a chip between chosen and not, without rebuilding the screen. */
+    public static void chipState(android.widget.TextView chip, boolean on) {
+        chip.setTextColor(on ? BG : TEXT);
+        chip.setBackground(roundRect(on ? AMBER : CHIP, on ? AMBER : BORDER, RADIUS_CONTROL,
+                chip.getContext()));
+    }
+
     public static EditText number(Context context, String hint, String value) {
         return field(context, hint, value, InputType.TYPE_CLASS_NUMBER
                 | InputType.TYPE_NUMBER_FLAG_DECIMAL);

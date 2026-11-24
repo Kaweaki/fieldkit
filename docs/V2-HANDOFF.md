@@ -625,3 +625,52 @@ adb stayed connected, and the Link card read `USB tethering -> ON` with
 and the same card reads `OFF` and `none - no usb0, rndis0 or eth0 interface`.
 adb dropped for a few seconds when the function set changed back; restarting the
 adb server (no replug) was enough. No crash in either state.
+
+## The survey (3.0)
+
+**What it is now.** A whole screen behind Link -> `OPEN THE SURVEY`, in the same
+V1 frame as every other tile: one form (site, category chip, count, note) and,
+below it, every saved survey newest first with its timestamp, category and count.
+Opening a card loads it back into the form for editing; saving replaces that
+survey rather than adding a second one. Delete is two taps: `DELETE` puts
+`CONFIRM DELETE` / `KEEP IT` on the card and the same sentence at the top of the
+screen, so a tap never looks like it did nothing.
+
+**Fast entry.** The site name stays in the form after a save and after a restart,
+and the category is remembered, so a second survey at the same place is a count
+and a save. The count field is numeric, so letters never reach it at all.
+
+**Validation that blocks.** `Survey.validate` is plain Java and refuses a name
+short of two characters, a count that is not a whole number, a count past
+100000, and a note past 400 characters. The message appears under the fields and
+nothing is written; the self test proves each rule and the adb flow proves the
+same rules on the phone.
+
+**Storage that does not lie.** `Survey` folds tabs, newlines and backslashes so a
+note can never split an entry, and every read re-sorts rather than trusting the
+file's order; a broken line is skipped, not guessed. The write path uses
+`Store.putNow` (`commit()`, not `apply()`) and only reports success when the write
+returned true - on a refusal the form keeps its text and says the survey was NOT
+saved. The draft is written on **every keystroke**, for the same reason: `apply()`
+queues the write, the process dies, and the last word is gone.
+
+**Measured on the SM-A505F** (`tools/v2/frames.py`, `tools/v2/survey_flow.py`):
+
+- Link -> SURVEY: 17 frames, mean 16 ms, max 16-17 ms, **late 0/16**; build 31-42
+  ms on the worker, attach 32-33 ms.
+- SURVEY -> SURVEY after a save: build 41 ms, attach 25 ms, 17 frames, 16 ms,
+  late 0/16.
+- SURVEY -> SURVEY after OPEN, after DELETE and after KEEP IT: 17 frames each,
+  16 ms, late 0/16.
+- Category chip press: 13 frames down and up, 16 ms, late 0/12.
+- 40/40 checks in the adb flow: bad name refused, bad count refused, save, cold
+  start, reopen with name/count/note restored, edit replaces instead of adding,
+  a half-typed draft (name, count and note) surviving `am force-stop`, delete
+  asking first, the empty state, and the delete surviving a restart. Zero crash
+  lines in logcat. A landscape rotation recreates the activity and leaves it
+  focused, with no crash.
+
+**What is still open.** The survey is local: one line per survey in the app's own
+preferences, so it goes when the app is uninstalled, and it is not encrypted the
+way the journal is. Export and a photo or GPS stamp per entry are the next
+honest steps, not done here.

@@ -68,6 +68,18 @@ public final class V2Activity extends Activity {
         });
     }
 
+    /** Opens the survey, and rebuilds it in place after a save, an edit or a delete. */
+    static void showSurvey(final Activity activity) {
+        final V2Activity self = (V2Activity) activity;
+        self.openTile = "SURVEY";
+        self.openOnWorker(new ViewBuilder() {
+            @Override
+            public View build() {
+                return Kit.survey(self, self.home());
+            }
+        });
+    }
+
     /** Rebuilds the Link tile so the cable readings can be refreshed in place. */
     static void showLink(final Activity activity) {
         final V2Activity self = (V2Activity) activity;

@@ -273,9 +273,10 @@ public final class Tools {
                         + "log; neither exists here."));
 
         accordion(activity, column, "ACTIVE SURVEY", body(activity,
-                "Not in this build. V1 scanned wifi and Bluetooth and wrote an encrypted "
-                        + "log while its screen was open. Nothing here scans in the "
-                        + "background or at all."));
+                "The survey is manual now: a site, a category, a count and a note, saved "
+                        + "on this phone as you type. V1's radio scan needed INTERNET, which "
+                        + "this app does not ask for, so nothing here scans in the background "
+                        + "or at all."));
 
         accordion(activity, column, "FIELDKIT PEERS", body(activity,
                 "Not in this build. V1 offered an opt-in UDP beacon on the local subnet; "

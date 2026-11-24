@@ -3,6 +3,7 @@ package se.blimark.fieldkit.v2;
 import android.app.Activity;
 import android.app.WallpaperManager;
 
+import se.blimark.fieldkit.Survey;
 import se.blimark.fieldkit.UsbReport;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -162,11 +163,22 @@ public final class Kit {
         }
         column.addView(bt);
 
-        LinearLayout survey = Ui.section(activity, "survey - active scan",
-                "Wifi and bluetooth intel, on demand", "off - not in this build");
-        survey.addView(Ui.note(activity, "V1 scanned nearby networks and wrote an encrypted "
-                + "log while its screen was open. This app has no scan, no log and no INTERNET "
-                + "permission."));
+        final int saved = Survey.decodeAll(Store.get(activity, KEY_SURVEYS, "")).size();
+        LinearLayout survey = Ui.section(activity, "survey",
+                "One site, one count, on this phone",
+                saved == 0 ? "empty - nothing saved yet"
+                        : saved + (saved == 1 ? " survey saved" : " surveys saved"));
+        survey.addView(Ui.note(activity, "A site name, a category, a count and a note. "
+                + "Every keystroke is kept, so a form left half-typed comes back exactly as it was. "
+                + "Nothing is scanned and nothing is sent: V1's radio scan needed INTERNET and this "
+                + "app has none."));
+        survey.addView(Ui.action(activity, "OPEN THE SURVEY", Ui.AMBER,
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        V2Activity.showSurvey(activity);
+                    }
+                }));
         column.addView(survey);
 
         column.addView(Ui.note(activity, "Every message is one framed line: a sender id, a "
@@ -770,6 +782,268 @@ public final class Kit {
         return name + "|" + detail;
     }
     // ---- journal -----------------------------------------------------------
+
+    // --- survey ----------------------------------------------------------
+
+    static final String KEY_SURVEYS = "surveys";
+    static final String KEY_SURVEY_DRAFT = "survey_draft";
+    static final String KEY_SURVEY_NAME = "survey_last_name";
+    static final String KEY_SURVEY_CATEGORY = "survey_last_category";
+
+    /** What the last save or delete said; the rebuilt screen shows it above the form. */
+    private static String surveyStatus = "";
+    /** The survey whose delete is waiting for its second tap. */
+    private static String surveyDelete = "";
+
+    /**
+     * The survey screen: one form, then every saved survey newest first.
+     *
+     * Two decisions shape it. The form writes the draft on every keystroke with
+     * commit() rather than apply(), so `am force-stop` in the middle of a word
+     * still leaves the word on disk; and the saved blob is only replaced after
+     * the write returned true, so a failed write leaves the list and the form
+     * untouched and says so instead of showing a survey that is not there.
+     */
+    public static View survey(final Activity activity, final Runnable back) {
+        final LinearLayout column = Tools.screen(activity, "SURVEY",
+                "one site, one count, kept on this phone", back);
+
+        final Survey.Draft draft = Survey.decodeDraft(Store.get(activity, KEY_SURVEY_DRAFT, ""));
+        final String[] id = {draft == null ? "" : draft.id};
+        final long[] made = {draft == null ? 0L : draft.created};
+        final String[] category = {draft != null && Survey.isCategory(draft.category)
+                ? draft.category : Store.get(activity, KEY_SURVEY_CATEGORY, "other")};
+        if (!Survey.isCategory(category[0])) {
+            category[0] = "other";
+        }
+
+        final EditText name = Ui.field(activity, "site or waypoint",
+                draft == null ? Store.get(activity, KEY_SURVEY_NAME, "") : draft.name,
+                android.text.InputType.TYPE_CLASS_TEXT
+                        | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        final EditText count = Ui.field(activity, "count", draft == null ? "" : draft.countText,
+                android.text.InputType.TYPE_CLASS_NUMBER);
+        final EditText note = Ui.field(activity, "what you saw", draft == null ? "" : draft.note,
+                android.text.InputType.TYPE_CLASS_TEXT
+                        | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                        | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        note.setMinLines(3);
+        final TextView error = Ui.note(activity, "");
+
+        final Runnable keep = new Runnable() {
+            @Override
+            public void run() {
+                String n = name.getText().toString();
+                String c = count.getText().toString();
+                String x = note.getText().toString();
+                if (id[0].length() == 0 && n.length() == 0 && c.length() == 0
+                        && x.length() == 0) {
+                    Store.putNow(activity, KEY_SURVEY_DRAFT, "");
+                } else {
+                    Store.putNow(activity, KEY_SURVEY_DRAFT, Survey.encodeDraft(
+                            new Survey.Draft(id[0], made[0], n, category[0], c, x)));
+                }
+            }
+        };
+        android.text.TextWatcher watcher = new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int removed, int added) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int countNow) {
+                keep.run();
+            }
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+            }
+        };
+        name.addTextChangedListener(watcher);
+        count.addTextChangedListener(watcher);
+        note.addTextChangedListener(watcher);
+
+        LinearLayout form = Ui.section(activity,
+                id[0].length() == 0 ? "new survey" : "draft kept",
+                id[0].length() == 0 ? "Fill once, save once" : "Editing a saved survey",
+                "Every keystroke goes straight to this phone's storage.");
+        if (surveyStatus.length() > 0) {
+            form.addView(Ui.note(activity, surveyStatus));
+        }
+        form.addView(Ui.fieldBlock(activity, "Site or waypoint", name));
+
+        final TextView[] chipViews = new TextView[Survey.CATEGORIES.length];
+        LinearLayout chips = new LinearLayout(activity);
+        chips.setOrientation(LinearLayout.HORIZONTAL);
+        chips.setPadding(0, Ui.dp(activity, 12), 0, 0);
+        for (int i = 0; i < Survey.CATEGORIES.length; i++) {
+            final String value = Survey.CATEGORIES[i];
+            TextView chip = Ui.chip(activity, value, value.equals(category[0]),
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            category[0] = value;
+                            for (int j = 0; j < chipViews.length; j++) {
+                                Ui.chipState(chipViews[j], Survey.CATEGORIES[j].equals(value));
+                            }
+                            keep.run();
+                        }
+                    });
+            chipViews[i] = chip;
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            if (i > 0) {
+                params.leftMargin = Ui.dp(activity, 6);
+            }
+            chips.addView(chip, params);
+        }
+        form.addView(chips);
+        form.addView(Ui.fieldBlock(activity, "Count", count));
+        form.addView(Ui.fieldBlock(activity, "What you saw", note));
+        form.addView(error);
+        form.addView(Ui.action(activity, "SAVE THE SURVEY", Ui.GREEN,
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        String nameText = name.getText().toString();
+                        String countText = count.getText().toString();
+                        String noteText = note.getText().toString();
+                        String problem = Survey.validate(nameText, countText, noteText);
+                        if (problem.length() > 0) {
+                            error.setText(problem);
+                            return;
+                        }
+                        long created = made[0] > 0 ? made[0] : System.currentTimeMillis();
+                        String entryId = id[0].length() > 0 ? id[0] : "s" + created;
+                        Survey.Entry entry = new Survey.Entry(entryId, created,
+                                nameText.trim(), category[0],
+                                Survey.count(countText), noteText.trim());
+                        String blob = Survey.add(Store.get(activity, KEY_SURVEYS, ""), entry);
+                        if (!Store.putNow(activity, KEY_SURVEYS, blob)) {
+                            surveyStatus = "This phone refused the write. " + entry.name
+                                    + " was NOT saved.";
+                            error.setText("Could not write to storage. Nothing was saved.");
+                            return;
+                        }
+                        Store.putNow(activity, KEY_SURVEY_DRAFT, "");
+                        Store.put(activity, KEY_SURVEY_NAME, entry.name);
+                        Store.put(activity, KEY_SURVEY_CATEGORY, entry.category);
+                        surveyStatus = "Saved " + entry.name + " at "
+                                + Survey.stamp(created) + ".";
+                        V2Activity.showSurvey(activity);
+                    }
+                }));
+        if (id[0].length() > 0) {
+            form.addView(Ui.button(activity, "STOP EDITING - BACK TO A NEW FORM", Ui.AMBER,
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            Store.putNow(activity, KEY_SURVEY_DRAFT, "");
+                            surveyStatus = "Left the saved survey alone. The form is new again.";
+                            V2Activity.showSurvey(activity);
+                        }
+                    }));
+        }
+        column.addView(form);
+
+        final List<Survey.Entry> saved = Survey.decodeAll(Store.get(activity, KEY_SURVEYS, ""));
+        LinearLayout list = Ui.section(activity, "saved surveys",
+                saved.size() == 0 ? "Nothing saved yet"
+                        : saved.size() + (saved.size() == 1 ? " survey on this phone"
+                        : " surveys on this phone"),
+                saved.size() == 0 ? "" : "Newest first, with the count and when it was saved.");
+        if (saved.isEmpty()) {
+            list.addView(Ui.note(activity, "The first survey you save appears here, newest at "
+                    + "the top. Nothing leaves this phone."));
+        }
+        for (final Survey.Entry entry : saved) {
+            LinearLayout card = Ui.section(activity, entry.category,
+                    entry.name, Survey.stamp(entry.created) + " - " + entry.count
+                            + (entry.count == 1 ? " counted" : " counted")
+                            + (entry.note.length() > 0 ? "\n" + entry.note : ""));
+            if (entry.id.equals(surveyDelete)) {
+                card.addView(Ui.note(activity, "Delete " + entry.name
+                        + "? This cannot be undone."));
+                card.addView(pair(activity,
+                        Ui.action(activity, "CONFIRM DELETE", Ui.RED,
+                                new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        String blob = Survey.remove(
+                                                Store.get(activity, KEY_SURVEYS, ""), entry.id);
+                                        boolean written = Store.putNow(activity, KEY_SURVEYS, blob);
+                                        surveyDelete = "";
+                                        surveyStatus = written ? "Deleted " + entry.name + "."
+                                                : "This phone refused the write. " + entry.name
+                                                + " is still here.";
+                                        V2Activity.showSurvey(activity);
+                                    }
+                                }),
+                        Ui.button(activity, "KEEP IT", Ui.AMBER,
+                                new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        surveyDelete = "";
+                                        surveyStatus = "Kept " + entry.name + ".";
+                                        V2Activity.showSurvey(activity);
+                                    }
+                                })));
+            } else {
+                card.addView(pair(activity,
+                        Ui.action(activity, "OPEN", Ui.AMBER,
+                                new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        Store.putNow(activity, KEY_SURVEY_DRAFT,
+                                                Survey.encodeDraft(new Survey.Draft(entry.id,
+                                                        entry.created, entry.name,
+                                                        entry.category,
+                                                        String.valueOf(entry.count),
+                                                        entry.note)));
+                                        surveyStatus = "Editing " + entry.name
+                                                + ". Saving replaces it.";
+                                        V2Activity.showSurvey(activity);
+                                    }
+                                }),
+                        Ui.button(activity, "DELETE", Ui.RED,
+                                new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        surveyDelete = entry.id;
+                                        // The confirmation is on the card, which can be
+                                        // below the fold after the rebuild; say it at the
+                                        // top too, so a tap never looks like a no-op.
+                                        surveyStatus = "Tap CONFIRM DELETE below to remove "
+                                                + entry.name + ".";
+                                        V2Activity.showSurvey(activity);
+                                    }
+                                })));
+            }
+            list.addView(card);
+        }
+        column.addView(list);
+
+        column.addView(Ui.note(activity, "Saved as one line per survey in this app's own "
+                + "storage, tabs and newlines folded so a note can never split an entry. "
+                + "Uninstall the app and the surveys go with it."));
+        return column;
+    }
+
+    /** Two buttons side by side, each half the width, the way the V1 cards pair them. */
+    private static LinearLayout pair(Activity activity, View left, View right) {
+        LinearLayout row = new LinearLayout(activity);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams first = new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        first.topMargin = Ui.dp(activity, 10);
+        LinearLayout.LayoutParams second = new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        second.topMargin = Ui.dp(activity, 10);
+        second.leftMargin = Ui.dp(activity, 8);
+        row.addView(left, first);
+        row.addView(right, second);
+        return row;
+    }
 
     public static View journal(final Activity activity, final Runnable back) {
         LinearLayout column = Tools.screen(activity, "FIELD JOURNAL",

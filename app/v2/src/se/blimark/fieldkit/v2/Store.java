@@ -55,6 +55,17 @@ public final class Store {
         prefs(context).edit().putString(key, value == null ? "" : value).apply();
     }
 
+    /**
+     * The same write, but it does not return until the disk has it.
+     *
+     * A draft that has to survive `am force-stop` cannot use apply(): the write
+     * is queued, the process dies, and the last keystrokes are gone. This returns
+     * false when the write failed, so the caller can say so instead of pretending.
+     */
+    public static boolean putNow(Context context, String key, String value) {
+        return prefs(context).edit().putString(key, value == null ? "" : value).commit();
+    }
+
     public static double number(Context context, String key, double fallback) {
         String raw = get(context, key, null);
         if (raw == null || raw.length() == 0) {

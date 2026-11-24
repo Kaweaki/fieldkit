@@ -30,10 +30,80 @@ public final class SelfTest {
         jpeg();
         geo();
         usb();
+        survey();
 
         System.out.println();
         System.out.println(passed + " passed, " + failed + " failed");
         System.exit(failed == 0 ? 0 : 1);
+    }
+
+    // ---------------------------------------------------------------- survey
+
+    private static void survey() {
+        ok("a one-letter site is refused", Survey.validateName(" A ").length() > 0);
+        ok("an empty site is refused", Survey.validateName("").length() > 0);
+        ok("a bare name is accepted", Survey.validateName("  Ridge 3 ").length() == 0);
+        StringBuilder longName = new StringBuilder();
+        for (int i = 0; i < Survey.MAX_NAME + 1; i++) {
+            longName.append('x');
+        }
+        ok("a name past the limit is refused", Survey.validateName(longName.toString()).length() > 0);
+        ok("an empty count is refused", Survey.validateCount("").length() > 0);
+        ok("a negative count is refused", Survey.validateCount("-1").length() > 0);
+        ok("a decimal count is refused", Survey.validateCount("12.5").length() > 0);
+        ok("letters in the count are refused", Survey.validateCount("12a").length() > 0);
+        ok("a count past the limit is refused", Survey.validateCount("999999").length() > 0);
+        ok("zero is a count", Survey.validateCount("0").length() == 0);
+        ok("the limit itself is allowed", Survey.validateCount("100000").length() == 0);
+        ok("the name is checked before the count",
+                Survey.validate("", "nope", "").startsWith("Name the site"));
+        ok("a bad count blocks the save",
+                Survey.validate("Ridge", "nope", "").startsWith("The count"));
+        ok("a good form passes", Survey.validate("Ridge", "12", "dry").length() == 0);
+        StringBuilder longNote = new StringBuilder();
+        for (int i = 0; i < Survey.MAX_NOTE + 1; i++) {
+            longNote.append('n');
+        }
+        ok("a note past the limit is refused", Survey.validateNote(longNote.toString()).length() > 0);
+        ok("water is a category", Survey.isCategory("water"));
+        ok("plasma is not", !Survey.isCategory("plasma"));
+
+        Survey.Entry tricky = new Survey.Entry("s1", 1000L, "Ridge\t3", "water", 7,
+                "line one\nline two\tend");
+        String line = Survey.encode(tricky);
+        equal("one survey is one line", -1, line.indexOf('\n'));
+        equal("six fields survive the fold", 6, line.split("\t", -1).length);
+        Survey.Entry backAgain = Survey.decode(line);
+        ok("the tab in the name comes back", backAgain.name.equals("Ridge\t3"));
+        ok("the newline in the note comes back", backAgain.note.equals("line one\nline two\tend"));
+        equal("the count comes back", 7, backAgain.count);
+        equal("the id comes back", "s1", backAgain.id);
+        equal("a broken line is not a survey", null, Survey.decode("not a survey"));
+        equal("an empty line is not a survey", null, Survey.decode(""));
+
+        Survey.Entry older = new Survey.Entry("s2", 2000L, "Spring", "food", 3, "");
+        Survey.Entry newer = new Survey.Entry("s3", 3000L, "Well", "water", 40, "clear");
+        String blob = Survey.add(Survey.add(Survey.add("", tricky), older), newer);
+        equal("three surveys are kept", 3, Survey.decodeAll(blob).size());
+        equal("newest first", "Well", Survey.decodeAll(blob).get(0).name);
+        equal("oldest last", "Ridge\t3", Survey.decodeAll(blob).get(2).name);
+        equal("a broken line never hides the good ones", 3,
+                Survey.decodeAll(blob + "\ngarbage").size());
+        Survey.Entry edited = new Survey.Entry("s3", 3000L, "Well", "water", 41, "clear");
+        String afterEdit = Survey.add(blob, edited);
+        equal("editing replaces instead of adding", 3, Survey.decodeAll(afterEdit).size());
+        equal("the edit wins", 41, Survey.decodeAll(afterEdit).get(0).count);
+        equal("delete removes one", 2, Survey.decodeAll(Survey.remove(blob, "s3")).size());
+        equal("delete of the last survey leaves nothing", "",
+                Survey.remove(Survey.remove(Survey.remove(blob, "s1"), "s2"), "s3"));
+
+        Survey.Draft draft = new Survey.Draft("", 0L, "Half typ", "medical", "", "two of");
+        Survey.Draft restored = Survey.decodeDraft(Survey.encodeDraft(draft));
+        equal("an empty count stays empty", "", restored.countText);
+        equal("the half-typed name comes back", "Half typ", restored.name);
+        equal("the chosen category comes back", "medical", restored.category);
+        equal("an empty draft is no draft", null, Survey.decodeDraft(""));
+        equal("a stamp is a readable minute", 16, Survey.stamp(0L).length());
     }
 
     // ---------------------------------------------------------------- sun
