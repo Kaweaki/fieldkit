@@ -368,8 +368,27 @@ found the things bounds cannot express:
 instance" and leaves Settings in front, so the documented capture command was
 capturing the wrong screen for V1.
 
-Still **not** verified on the phone: sending a real line to either paired device,
-setting the wallpaper and reading it back, a backup/restore round trip, and the
-journal seal/reopen. Everything above was read from the accessibility tree and
-the crash buffer; nothing was assumed.
+### The app's own paths, exercised on the phone
+
+- **Calculator 01, clear water:** `0,84 mL of 5% bleach, about 17 drops, wait 30
+  minutes` - the 2 mg/L dose. With `Cloudy water? 1`: `1,68 mL ... 34 drops` -
+  the 4 mg/L dose. So the double-dose bug that opened this session is fixed in
+  the UI, not only in `Water`.
+- **Journal:** sealing a 19-character entry reports "Sealed. 19 characters
+  written.", reopening with the same passphrase reports "Opened. 19
+  characters.", a wrong passphrase reports "That passphrase does not open this
+  journal.", and clearing reports "Deleted." The test entry was cleared again;
+  the phone keeps no test data.
+- **Link:** both states, listing the two paired devices above.
+
+Not exercised, and why: the lock-screen wallpaper (it replaces the owner's own
+lock screen, and the earlier session already verified `FLAG_LOCK` through the
+wallpaper record), a Bluetooth send (neither paired device is a serial port, so
+a send would only exercise the error path), and the SAF backup/restore round
+trip (the system picker needs a person to choose a folder). Those three are the
+next real tests.
+
+Tooling note: `build-v2.sh` signs with a debug keystore but the manifest is not
+`debuggable`, so `run-as` refuses to look inside the app - every read above went
+through the app's own screens, not its files.
 
