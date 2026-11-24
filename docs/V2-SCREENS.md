@@ -37,8 +37,11 @@ Everything below was sampled from V1's own pixels at 440 dpi, not chosen.
 | control height | 48 dp | buttons, chips |
 | tile | 316 x 264 px, 8 dp gaps | the home grid |
 | chip | 48 dp tall, 4 dp gap between chips | every chip grid |
-| header | grey build label, 33 sp title, 11 sp subtitle, 1 dp amber rule fading right | home |
-| detail header | outlined back pill (10 sp), 22 sp amber caps title, 11 sp subtitle, same rule | every tile |
+| control radius | 10 dp | chips, back pill, every button |
+| field radius | 8 dp | every input |
+| card radius | 24 dp | cards and tiles |
+| header | grey build label, 33 sp title, 12.5 sp subtitle, 2 dp amber rule fading right | home |
+| detail header | outlined back pill (10 sp), 22 sp amber caps title, 12.5 sp subtitle, same rule | every tile |
 
 ### The type scale, measured in ink
 
@@ -51,16 +54,23 @@ measuring the ink of the same string in both captures (`docs/screens/v1` scaled
 
 | Element | V1 ink (1080 px) | V1 | V2 now |
 |---|---|---|---|
-| home title `FIELDKIT` | 64 px | 33 sp | 33 sp |
-| detail title `PROFILE` | 40 px | 22 sp | 22 sp |
-| subtitle | 28 px | 11 sp | 11 sp |
+| home title `FIELDKIT` | 131 px | 33 sp | 33 sp |
+| detail title `PROFILE` | 46 px of ink | 22 sp | 22 sp (46 px of ink) |
+| subtitle | 47 px | 12.5 sp | 12.5 sp |
 | body copy | - | 11 sp | 11 sp |
-| chip label `pregnant` | 28 px | 11 sp | 11 sp |
-| field label `Name` | 18 px | 9 sp, sentence case | 9 sp, sentence case |
-| field text `Person 1` | 26 px | 13 sp in a 96 px box | 13 sp in a 96 px box |
-| build label `FIELDKIT 2.8` | 16 px | 10 sp | 10 sp |
-| tile name / detail | - | 12 / 10 sp | 12 / 10 sp |
-| back pill `FIELDKIT` | 20 px | 10 sp | 10 sp |
+| chip label `pregnant` | 29 px of ink | 11.5 sp | 11.5 sp |
+| form label `Name` | 43 px | 11 sp, sentence case | 11 sp, sentence case |
+| field text | 96 px box | 13 sp in a 96 px box | 13 sp in a 93 px box |
+| build label `FIELDKIT 2.8` | 37 px | 10 sp | 10 sp |
+| tile name / detail | 47 / 37 px | 12 / 10 sp | 12 / 10 sp |
+| back pill `FIELDKIT` | 126 px tall | 10 sp caps | 10 sp caps |
+| chip / pill / field corner | 23 / 24 / 22 px inset | about 9 / 9 / 8 dp | 10 / 10 / 8 dp |
+| header rule | 5 px at 420 dpi | 2 dp | 2 dp |
+
+The first table above was measured on the 440 dpi emulator, where the system
+font scale was 1.0. The phone the owner carries runs at 420 dpi **and a font
+scale of 1.1**, so every sp draws about 10% larger there; the last column is what
+the phone now measures, not what the emulator shows.
 
 V2's sp values are kept as sp on purpose: a phone with enlarged system text
 should enlarge FieldKit too. The captures above were taken with the system font
@@ -76,6 +86,18 @@ Primary and secondary controls are a fixed pair in V1: the one main action on a
 screen is **filled amber with near-black caps**, everything else is a **thin
 outlined pill with amber caps**. V2 now follows that rule (`Ui.action` versus
 `Ui.button`).
+
+## Differences that are deliberate
+
+These are visible in the pair and are not going to be "fixed", because matching
+V1 here would mean drawing a control with nothing behind it:
+
+- **No `⋮` on a detail header.** V1 puts an overflow menu at the top right of every
+  tile screen (`x=959-1036` on Link). This build has no overflow items, so it
+  draws no button; a menu that opens empty is worse than no menu.
+- **The SOS card sits under the grid.** V1 has no distress panel at all.
+- **Controls keep V1's 48 dp.** V2 enforces it as a minimum height rather than
+  through padding, so shrinking the label could not shrink the target.
 
 ## Per-screen verdict
 

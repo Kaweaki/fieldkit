@@ -99,10 +99,12 @@ two apps done — it is the one device that is not an emulator.
 3. **Re-capture Link** now that the duplicate paragraph is fixed, and capture the
    granted state (`pm grant se.blimark.fieldkit.v2 android.permission.BLUETOOTH_SCAN`
    and `…BLUETOOTH_CONNECT`), since `pm revoke` suppresses the system dialog
-   afterwards.
+   afterwards. *Done on the phone 2026-11-24: both states captured; on API 29 the
+   permission is `ACCESS_FINE_LOCATION`, and granted it lists two paired devices.*
 4. **Re-verify on the SM-A505F** with the restyled build: twelve tiles, SOS
    reaching SIGNALLING, empty crash buffer. The phone is API 29, so its Link screen
-   must still show the pre-12 location wording.
+   must still show the pre-12 location wording. *Done 2026-11-24: twelve tiles,
+   SIGNALLING with 16 torch events, empty crash buffer, pre-12 wording shown.*
 5. Re-run `build-v2.sh`, the unit tests and `apkcheck`, and commit the result.
 
 ## Environment, from nothing
@@ -280,14 +282,94 @@ numbers have not been re-captured against V1. Build, self test, the Python suite
 and `apkcheck` are green; the pixel comparison is the first thing to run when the
 phone is back.
 
-### Blocked
+### On the SM-A505F
 
-The SM-A505F answered as `R58M52YG20N unauthorized`, then dropped off the bus, so
-`adb install -r`, the granted-state Link capture (item 3) and the phone run
-(item 4) are all still outstanding. Reconnect, authorize USB debugging, then:
+The handset answered and was authorized, so items 3 and 4 were run on it. What
+it is: Android 10, **API 29**, 1080x2340 at **420 dpi**, and **font_scale 1.1** -
+the owner has enlarged system text, so every sp draws about 10% larger than on
+the 440 dpi emulator. That alone explains most of the "V2 is 10-13% bigger"
+reading against the emulator captures: V2 is sp-based on purpose and follows the
+setting, and V1 does too.
 
-```
-ADB=<sdk>/platform-tools/adb FK_SERIAL=R58M52YG20N python tools/v2/tour.py \
-    --apk app/build/FieldKit-V2.apk
-```
+The old `se.blimark.fieldkit.v2` on the phone was a **release-signed** `2.9 (21)`
+from the previous session, so `adb install -r` was refused with
+`INSTALL_FAILED_UPDATE_INCOMPATIBLE`. `pm uninstall -k` keeps the data but still
+blocks the install, and that data cannot be read from a non-debuggable build, so
+the package was removed and installed fresh. **The old test build's settings and
+journal are gone**; V1 (`se.blimark.fieldkit`, `2.8 (19)`) was not touched, and
+its profile, journal and permissions are as they were. Every later build on this
+phone must use the same keystore, or it will wipe again - see
+`docs/COMPATIBILITY.md`.
+
+Verified on the phone:
+
+- `tools/v2/tour.py`: all twelve tiles open onto their own screen, SOS reaches
+  SIGNALLING with **16 torch events** logged by the camera service against the
+  app's pid, the crash buffer is **empty**, and the pid is stable across the SOS
+  start and stop (20679 before and after). The pid does change from tile to
+  tile because `home()` force-stops the app between screens; that is the tour's
+  design, not a restart of the UI.
+- **Link, both states.** With the permission missing it shows the API 29 wording
+  ("Android 11 and earlier need Location for a Bluetooth scan"), which is the
+  pre-12 branch working. Granted, it lists the phone's **two real paired
+  devices** - `ROUGHBEAT FC:58:FA:8E:FB:15` and
+  `ACTON BLUETOOTH 04:FE:A1:61:3D:...` - each with a send button, under the
+  message field. So the radio path end to end is live on the handset, not just
+  on the emulator.
+
+### The type scale, measured on the phone
+
+With V1 and V2 captured on the **same phone at the same font scale**, the deficit
+could finally be measured instead of inferred. (3.9 px per sp on this device):
+
+| Element | V1 | V2 now |
+|---|---|---|
+| detail title `PROFILE` / `LINK` | 86 px | 86 px |
+| home title `FIELDKIT` | 131 px | 127 px |
+| subtitle | 47 px | 49 px |
+| form label `Name` | 43 px | 43 px |
+| field box | 96 px | 93 px |
+| chip box / row pitch | 126 / 137 px | 126 / 137 px |
+| Allergies label | 1853 px | 1863 px |
+| last chip on screen | nuts, latex | nuts, latex |
+
+Two structural findings came out of the phone pair that no emulator capture had
+shown:
+
+- **V1 draws Profile as one card.** The gap from the age field to the Conditions
+  label measures 18 dp in V1; three stacked cards produce 44 dp, and that alone
+  cost V2 a screen's worth of room. Profile is now one card with 16 dp and 10 dp
+  spacers, and it lands within 11 px of V1 all the way down.
+- **V1 puts the owner's name in the home header**, left of the build label
+  (`HARALD BLIMARK` ... `FIELDKIT 2.8`). V2 now does the same, from the same
+  stored value the Profile form and the ICE card use.
+
+### What the pixels showed
+
+Comparing the two Profile captures by eye - both on the phone, same font scale -
+found the things bounds cannot express:
+
+- **V1's controls are rounded rectangles, not lozenges.** On its top row a chip
+  insets 23 px, the back pill 24 px and a field 22 px at 420 dpi, so chips and
+  pills are about 10 dp and fields 8 dp. V2 drew 24 dp on a 48 dp chip, which is
+  a stadium - the single most obvious "this is a different app" cue in the pair.
+  `Ui.RADIUS_CONTROL` (10) and `RADIUS_FIELD` (8) now carry the measured values,
+  including the re-draw when a chip is tapped.
+- **The header rule is 2 dp.** V1's rule is five pixels tall on the phone; the
+  1 dp value in the previous session came from a thresholded reading of the
+  emulator capture, not from V1.
+- **The home header carries the owner's name**, left of the build label, from
+  the same default the Profile form fills in.
+- **The SOS panel's one main action is filled amber** - V1's button language -
+  instead of a muted red fill with dark text that read as a disabled control.
+
+`tools/v2/emu.py` also learned to fall back to a launcher start: on this phone
+`am start` answers "intent has been delivered to currently running top-most
+instance" and leaves Settings in front, so the documented capture command was
+capturing the wrong screen for V1.
+
+Still **not** verified on the phone: sending a real line to either paired device,
+setting the wallpaper and reading it back, a backup/restore round trip, and the
+journal seal/reopen. Everything above was read from the accessibility tree and
+the crash buffer; nothing was assumed.
 

@@ -89,38 +89,39 @@ public final class Tools {
         final EditText age = Ui.number(activity, "age in years",
                 Store.get(activity, "age", ""));
 
-        LinearLayout person = Ui.card(activity);
-        person.addView(Ui.fieldBlock(activity, "Name", name));
-        person.addView(Ui.fieldBlock(activity, "Body weight, kg", weight));
-        person.addView(Ui.fieldBlock(activity, "Age in years - optional", age));
-        column.addView(person);
+        // V1 draws the whole profile as one card: its content edge never moves,
+        // and the gap from the age field to the Conditions label measures 18 dp,
+        // not the 44 dp that three stacked cards produce. That gap is why V2 was
+        // a screen short of V1's allergy chips.
+        LinearLayout form = Ui.card(activity);
+        form.addView(Ui.fieldBlock(activity, "Name", name));
+        form.addView(Ui.fieldBlock(activity, "Body weight, kg", weight));
+        form.addView(Ui.fieldBlock(activity, "Age in years - optional", age));
 
         final java.util.Set<String> conditions =
                 csv(Store.get(activity, "conditions", ""));
-        LinearLayout conditionCard = Ui.card(activity);
-        conditionCard.addView(Ui.sentenceLabel(activity, "Conditions - tap all that apply"));
-        conditionCard.addView(chipGrid(activity, CONDITIONS, conditions, "conditions"));
-        column.addView(conditionCard);
+        form.addView(Ui.spacer(activity, 16));
+        form.addView(Ui.sentenceLabel(activity, "Conditions - tap all that apply"));
+        form.addView(chipGrid(activity, CONDITIONS, conditions, "conditions"));
 
         final java.util.Set<String> allergies = csv(Store.get(activity, "allergies_pick", ""));
         final EditText otherAllergies = Ui.textField(activity, "other allergies",
                 Store.get(activity, "allergies", ""));
-        LinearLayout allergyCard = Ui.card(activity);
-        allergyCard.addView(Ui.sentenceLabel(activity, "Allergies - tap all that apply"));
-        allergyCard.addView(chipGrid(activity, ALLERGIES, allergies, "allergies_pick"));
-        allergyCard.addView(Ui.fieldBlock(activity, "Other allergies", otherAllergies));
-        column.addView(allergyCard);
+        form.addView(Ui.spacer(activity, 10));
+        form.addView(Ui.sentenceLabel(activity, "Allergies - tap all that apply"));
+        form.addView(chipGrid(activity, ALLERGIES, allergies, "allergies_pick"));
+        form.addView(Ui.fieldBlock(activity, "Other allergies", otherAllergies));
 
         final EditText meds = Ui.textField(activity, "medicines",
                 Store.get(activity, "meds", ""));
         final java.util.Set<String> load = csv(Store.get(activity, "workload", "moderate"));
-        LinearLayout medCard = Ui.card(activity);
-        medCard.addView(Ui.sentenceLabel(activity,
+        form.addView(Ui.spacer(activity, 16));
+        form.addView(Ui.sentenceLabel(activity,
                 "Regular medicines - name and where it is kept"));
-        medCard.addView(meds);
-        medCard.addView(Ui.sentenceLabel(activity, "Usual workload"));
-        medCard.addView(chipGrid(activity, WORKLOAD, load, "workload"));
-        column.addView(medCard);
+        form.addView(meds);
+        form.addView(Ui.sentenceLabel(activity, "Usual workload"));
+        form.addView(chipGrid(activity, WORKLOAD, load, "workload"));
+        column.addView(form);
 
         column.addView(Ui.action(activity, "SAVE THIS PROFILE", new View.OnClickListener() {
             @Override
@@ -617,7 +618,7 @@ public final class Tools {
                     boolean on = chosen.contains(label);
                     chip.setTextColor(on ? Ui.BG : Ui.TEXT);
                     chip.setBackground(Ui.roundRect(on ? Ui.AMBER : Ui.CHIP,
-                            on ? Ui.AMBER : Ui.BORDER, 24, activity));
+                            on ? Ui.AMBER : Ui.BORDER, Ui.RADIUS_CONTROL, activity));
                     Store.put(activity, key, join(chosen));
                 }
             });

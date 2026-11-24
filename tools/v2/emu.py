@@ -69,11 +69,31 @@ def pid(package=PKG_V2):
     return sh("shell", "pidof", package).decode("utf-8", "replace").strip()
 
 
+def focus():
+    """The window that currently has input focus, as dumpsys reports it."""
+    out = sh("shell", "dumpsys", "window").decode("utf-8", "replace")
+    for line in out.splitlines():
+        if "mCurrentFocus=" in line:
+            return line.split("mCurrentFocus=", 1)[1].strip()
+    return ""
+
+
 def home(package=PKG_V2, activity=".V2Activity"):
-    """Restart the app so every capture starts from the same screen."""
+    """Restart the app so every capture starts from the same screen.
+
+    On the SM-A505F `am start` will not raise a task that is not already in front
+    - it answers "intent has been delivered to currently running top-most
+    instance" and leaves Settings on screen - so a launch that does not end up
+    focused is retried through the launcher, which does raise it.
+    """
     import time
     sh("shell", "am", "start", "-S", "-n", package + "/" + activity)
     time.sleep(3)
+    if package not in focus():
+        sh("shell", "am", "force-stop", package)
+        time.sleep(1)
+        sh("shell", "monkey", "-p", package, "-c", "android.intent.category.LAUNCHER", "1")
+        time.sleep(3)
 
 
 def shot(path):

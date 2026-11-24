@@ -82,7 +82,7 @@ public final class Sos {
 
         final Sos sos = new Sos(activity, flash, state);
 
-        column.addView(Ui.action(activity, "START THE SIGNAL", Ui.RED, new View.OnClickListener() {
+        column.addView(Ui.action(activity, "START THE SIGNAL", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 sos.start();

@@ -70,13 +70,17 @@ public final class Ui {
     /** Detail title: V1's PROFILE is 40 px of ink, so 22 sp. */
     public static final float TITLE_DETAIL = 22f;
     /** A card's own heading line. */
-    public static final float HEAD = 12f;
+    public static final float HEAD = 13f;
     /** Subtitle, body copy, chip text and list rows. */
-    public static final float BODY = 11f;
-    /** The smallest print. */
-    public static final float NOTE = 10f;
+    public static final float BODY = 12.5f;
+    /** Body lines and the smallest print. */
+    public static final float NOTE = 11f;
     /** Grey caps labels and the tags at the end of a row. */
-    public static final float LABEL = 9f;
+    public static final float LABEL = 10f;
+    /** What a form calls its own boxes: V1 draws these at 11 sp, sentence case. */
+    public static final float FORM = 11f;
+    /** Chip labels: V1's "pregnant" is 29 px of ink where a 12.5 sp line gives 32. */
+    public static final float CHIP_TEXT = 11.5f;
     /** What the user types: V1's 13 sp inside a 96 px box. */
     public static final float INPUT = 13f;
     /** Back pill and every other button. */
@@ -84,6 +88,15 @@ public final class Ui {
     /** A tile's name and its one-line detail. */
     public static final float TILE_TITLE = 12f;
     public static final float TILE_SUB = 10f;
+
+    // ---- corner radii ------------------------------------------------------
+    // Measured on the phone off V1's own pixels: at 420 dpi its chips inset 23 px
+    // on the top row and its fields 22 px, so the controls are rounded rectangles
+    // of about 9-10 dp. A 48 dp chip drawn with a 24 dp radius is a lozenge, and
+    // that one number made the two apps read as different designs.
+    public static final int RADIUS_CARD = 24;
+    public static final int RADIUS_CONTROL = 10;
+    public static final int RADIUS_FIELD = 8;
 
     private Ui() {
     }
@@ -124,7 +137,7 @@ public final class Ui {
      * through {@link #caps}.
      */
     public static TextView sentenceLabel(Context context, String value) {
-        TextView view = text(context, value, LABEL, MUTED);
+        TextView view = text(context, value, FORM, MUTED);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         params.topMargin = dp(context, 2);
@@ -172,9 +185,10 @@ public final class Ui {
                         android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
                         new int[]{AMBER, 0x66FFB000, 0x00FFB000});
         view.setBackground(line);
+        // 2 dp: on the phone V1's rule is five pixels tall at 420 dpi.
         LinearLayout.LayoutParams params =
                 new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-                        dp(context, 1));
+                        dp(context, 2));
         params.topMargin = dp(context, 12);
         view.setLayoutParams(params);
         return view;
@@ -247,10 +261,13 @@ public final class Ui {
         button.setTypeface(button.getTypeface(), android.graphics.Typeface.BOLD);
         button.setTextColor(textColour);
         button.setGravity(Gravity.CENTER);
-        button.setMinHeight(0);
-        button.setMinimumHeight(0);
+        // Every control in V1 measures 132 px on a 440 dpi screen - 48 dp - and
+        // that height does not shrink with its label. Padding alone gave 40 dp.
+        button.setMinHeight(dp(context, 48));
+        button.setMinimumHeight(dp(context, 48));
         button.setPadding(dp(context, 20), dp(context, 14), dp(context, 20), dp(context, 14));
-        android.graphics.drawable.GradientDrawable shape = roundRect(fill, stroke, 24, context);
+        android.graphics.drawable.GradientDrawable shape = roundRect(fill, stroke, RADIUS_CONTROL,
+                context);
         shape.setStroke(dp(context, 1), Color.argb(strokeAlpha, Color.red(stroke),
                 Color.green(stroke), Color.blue(stroke)));
         button.setBackground(shape);
@@ -281,8 +298,8 @@ public final class Ui {
         edit.setTextColor(TEXT);
         edit.setHintTextColor(DIM);
         edit.setInputType(inputType);
-        edit.setBackground(roundRect(FIELD, BORDER, 12, context));
-        edit.setPadding(dp(context, 16), dp(context, 10), dp(context, 16), dp(context, 10));
+        edit.setBackground(roundRect(FIELD, BORDER, RADIUS_FIELD, context));
+        edit.setPadding(dp(context, 16), dp(context, 8), dp(context, 16), dp(context, 8));
         edit.setLayoutParams(spaced(context, 4));
         return edit;
     }
@@ -377,9 +394,10 @@ public final class Ui {
     /** A tap-to-toggle chip, the shape V1 uses for its condition buttons. */
     public static android.widget.TextView chip(Context context, String label, boolean on,
                                                View.OnClickListener listener) {
-        android.widget.TextView view = text(context, label, BODY, on ? BG : TEXT);
+        android.widget.TextView view = text(context, label, CHIP_TEXT, on ? BG : TEXT);
         view.setGravity(Gravity.CENTER);
-        view.setBackground(roundRect(on ? AMBER : CHIP, on ? AMBER : BORDER, 24, context));
+        view.setBackground(roundRect(on ? AMBER : CHIP, on ? AMBER : BORDER, RADIUS_CONTROL,
+                context));
         view.setPadding(dp(context, 12), dp(context, 14), dp(context, 12), dp(context, 14));
         view.setOnClickListener(listener);
         return view;

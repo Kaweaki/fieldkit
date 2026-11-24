@@ -61,8 +61,10 @@ public final class V2Activity extends Activity {
         root.removeAllViews();
         current = screen;
 
-        final int side = Ui.dp(this, 18);
-        final int top = Ui.dp(this, 14);
+        // V1 puts its content 16 dp from the side edge and its first control 8 dp
+        // under the status bar; both were measured off its own bounds on the phone.
+        final int side = Ui.dp(this, 16);
+        final int top = Ui.dp(this, 8);
         final int bottom = Ui.dp(this, 24);
         final LinearLayout pad = new LinearLayout(this);
         pad.setOrientation(LinearLayout.VERTICAL);
@@ -115,8 +117,25 @@ public final class V2Activity extends Activity {
     private View build() {
         LinearLayout column = Ui.column(this);
 
-        // V1 puts the build label above the title, in grey caps, and nothing else.
-        column.addView(Ui.caps(this, "FIELDKIT 2.9", Ui.NOTE, Ui.MUTED));
+        // V1's header row: who this phone belongs to on the left, the build on the
+        // right. The name is the same value the Profile form and ICE card use.
+        LinearLayout head = new LinearLayout(this);
+        head.setOrientation(LinearLayout.HORIZONTAL);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        // The same default the Profile form fills in, so the two always agree.
+        String who = Store.get(this, "owner", Store.NAME).trim();
+        if (who.length() > 0) {
+            TextView name = Ui.caps(this, who, Ui.NOTE, Ui.MUTED);
+            name.setLayoutParams(new LinearLayout.LayoutParams(0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            head.addView(name);
+        }
+        head.addView(Ui.caps(this, "FIELDKIT 2.9", Ui.NOTE, Ui.MUTED));
+        LinearLayout.LayoutParams headParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        headParams.topMargin = Ui.dp(this, 16);
+        head.setLayoutParams(headParams);
+        column.addView(head);
         column.addView(Ui.title(this, "FIELDKIT", Ui.TITLE_HOME));
         column.addView(Ui.text(this, "offline index + tools - tap a tile", Ui.BODY, Ui.MUTED));
         column.addView(Ui.rule(this));
@@ -138,7 +157,10 @@ public final class V2Activity extends Activity {
         bar.addView(Ui.caps(this, "SOS", Ui.NOTE, Ui.RED));
         bar.addView(Ui.text(this, "torch and tone in Morse, plus a message ready to send",
                 Ui.BODY, Ui.TEXT));
-        bar.addView(Ui.action(this, "OPEN THE DISTRESS PANEL", Ui.RED,
+        // V1's rule is that the one main action is filled amber; a muted red fill
+        // with dark text reads as a disabled control, so the card keeps the red
+        // border and the button is V1's amber.
+        bar.addView(Ui.action(this, "OPEN THE DISTRESS PANEL",
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
