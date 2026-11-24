@@ -528,3 +528,49 @@ grid's chip comes from `Ui.chip`, which was already covered.
 What MAPS still cannot do, and why: draw map tiles. That needs a renderer and tile
 data, and the build has no INTERNET permission by design; the `.mbtiles` card
 inspects a file you carry instead of rendering it.
+
+## The cable, the battery, and a screen that arrives (2.9)
+
+**USB inspector.** Link's USB card now reads the phone's own state and opens a
+real inspector (`UsbInspect`) instead of promising a host that was not there.
+The card shows power source (BatteryManager), host-port device count
+(UsbManager.getDeviceList) and whether USB tethering is up, which the kernel
+answers through `/sys/class/net` names - `usb0`, `rndis0`, `eth0`. No permission
+is declared for any of it. On the SM-A505F with the phone on the PC cable that
+reads USB / EMPTY / OFF, and the tether interface list is empty, which is the
+truth at that moment.
+
+`INSPECT THE CABLE` opens the inspector. It reports host support
+(FEATURE_USB_HOST), the AOA accessory list, and every attached device with its
+vendor and product ids resolved against a bundled table. Reading a device needs
+Android's own per-device grant: the app registers a receiver for its permission
+action, asks with `requestPermission`, and reads the device the moment the answer
+arrives. The read opens a `UsbDeviceConnection`, takes `getRawDescriptors()`
+(falling back to a `GET_DESCRIPTOR` control transfer), parses it through
+`UsbReport`, asks for the language ids (`0x0300`), claims HID interfaces only for
+the length of a `0x22` read and releases them, then closes the connection in a
+`finally` block. The report is shown as one folded card per section and saved as
+JSON through SAF.
+
+`getPorts()` is not reachable from a normal app on this build: the phone answers
+the call with a SecurityException, and the screen says exactly that rather than
+pretending the port is unknown hardware.
+
+**Battery.** Settings has a BATTERY section: level, charge state, power source
+and temperature from the sticky battery intent, the system saver state from
+`PowerManager.isPowerSaveMode()`, a DIM THIS APP control that sets the window's
+`screenBrightness` to 12 % and reads it back from the window (so the line proves
+what the window manager holds), and a button that opens the system battery saver.
+On the phone the line read `100%, full, power in from USB, 24.4 C` and
+`System battery saver: on`, both matching `dumpsys battery` and
+`settings get global low_power`.
+
+**Motion.** Every screen now fades and lifts into place over 190 ms
+(`alpha` 0→1, `translationY` 14 dp→0, decelerate) instead of snapping, and the
+pills fill their card, as V1's do. The back pill is the one control that keeps
+hugging its label.
+
+**Tests.** `UsbReport` is pure Java and carries 34 new self-test cases: a
+hand-built descriptor blob (CP2102 ids, one configuration, a bulk and an
+interrupt endpoint), the 2 mA and 8 mA power conversions, truncated and empty
+blobs, the hex dump, JSON escaping and HID usage pages. 117 tests, 0 failed.

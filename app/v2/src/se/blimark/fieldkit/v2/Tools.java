@@ -183,6 +183,66 @@ public final class Tools {
         }));
         accordion(activity, column, "OWNER", ownerBody);
 
+        // Battery: the numbers the phone reports, plus the two things this app can
+        // actually do about them - dim its own screen, or hand over to the system
+        // saver. Neither needs a permission.
+        final boolean dimmed = activity.getWindow().getAttributes().screenBrightness >= 0f;
+        final LinearLayout batteryBody = Ui.column(activity);
+        final android.widget.TextView batteryLine = Ui.note(activity, batteryReadout(activity));
+        batteryBody.addView(batteryLine);
+        batteryBody.addView(Ui.note(activity, "System battery saver: "
+                + (Hardware.powerSaveOn(activity) ? "on" : "off")
+                + " (PowerManager isPowerSaveMode)"));
+        // The dim stays inside this app's window, so leaving the screen or pressing
+        // back restores the phone's own brightness on its own.
+        final android.widget.Button dim = Ui.button(activity, dimmed ? "RESTORE THE BRIGHTNESS"
+                : "DIM THIS APP TO SAVE POWER", Ui.AMBER, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+            }
+        });
+        dim.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean nowDim = activity.getWindow().getAttributes().screenBrightness >= 0f;
+                android.view.WindowManager.LayoutParams params =
+                        activity.getWindow().getAttributes();
+                params.screenBrightness = nowDim
+                        ? android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                        : 0.12f;
+                activity.getWindow().setAttributes(params);
+                // Read back from the window, not from a field, so the line proves what
+                // the window manager actually holds.
+                boolean after = activity.getWindow().getAttributes().screenBrightness >= 0f;
+                dim.setText(after ? "RESTORE THE BRIGHTNESS" : "DIM THIS APP TO SAVE POWER");
+                batteryLine.setText(batteryReadout(activity) + "\nScreen: "
+                        + (after ? "dimmed to 12% inside this app" : "at the phone's own level"));
+            }
+        });
+        batteryBody.addView(dim);
+        batteryBody.addView(Ui.button(activity, "OPEN THE BATTERY SAVER", Ui.GREEN,
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        try {
+                            activity.startActivity(new android.content.Intent(
+                                    android.provider.Settings.ACTION_BATTERY_SAVER_SETTINGS));
+                        } catch (RuntimeException e) {
+                            android.widget.Toast.makeText(activity,
+                                    "This phone has no battery saver screen.",
+                                    android.widget.Toast.LENGTH_LONG).show();
+                        }
+                    }
+                }));
+        batteryBody.addView(Ui.button(activity, "READ THE BATTERY AGAIN", Ui.BLUE,
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        V2Activity.showSettings(activity);
+                    }
+                }));
+        accordion(activity, column, "BATTERY", batteryBody);
+
         accordion(activity, column, "PASSCODE", body(activity,
                 "There is no app lock in this build. Each journal entry is sealed on "
                         + "its own with the passphrase you type on the Journal tile, so a "
@@ -550,6 +610,15 @@ public final class Tools {
     // ---- shared structure --------------------------------------------------
 
     /** A settings section that opens in place, with V1's plus and minus. */
+    /** One line of what the phone reports about its own battery. */
+    static String batteryReadout(Activity activity) {
+        String temperature = Hardware.batteryTemperature(activity);
+        return "Battery: " + Hardware.batteryPercent(activity)
+                + ", " + Hardware.batteryStatus(activity)
+                + ", power in from " + Hardware.powerSource(activity)
+                + (temperature.length() > 0 ? ", " + temperature : "");
+    }
+
     static void accordion(final Activity activity, LinearLayout column, String title,
                           View body) {
         final LinearLayout card = Ui.card(activity);

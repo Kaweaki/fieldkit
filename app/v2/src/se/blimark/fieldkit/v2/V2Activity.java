@@ -1,7 +1,10 @@
 package se.blimark.fieldkit.v2;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -40,6 +43,7 @@ public final class V2Activity extends Activity {
     static final int REQ_PHOTO = 5005;
     static final int REQ_PHOTO_SAVE = 5006;
     static final int REQ_GPX = 5007;
+    static final int REQ_USB_JSON = 5008;
 
     /** Rebuilds the Maps tile after a fix is read or a waypoint changes. */
     static void showMaps(final Activity activity) {
@@ -48,6 +52,60 @@ public final class V2Activity extends Activity {
             @Override
             public void run() {
                 self.goHome();
+            }
+        }));
+    }
+
+    /** Opens the USB inspector, and marks it so an attach or detach rebuilds it. */
+    static void showUsb(final Activity activity) {
+        final V2Activity self = (V2Activity) activity;
+        self.openTile = "USB";
+        self.open(Kit.usb(self, new Runnable() {
+            @Override
+            public void run() {
+                self.goHome();
+            }
+        }));
+    }
+
+    /** Rebuilds the Link tile so the cable readings can be refreshed in place. */
+    static void showLink(final Activity activity) {
+        final V2Activity self = (V2Activity) activity;
+        self.open(Kit.link(self, new Runnable() {
+            @Override
+            public void run() {
+                self.goHome();
+            }
+        }));
+    }
+
+    /** Rebuilds the Settings tile so the battery readings can be refreshed. */
+    static void showSettings(final Activity activity) {
+        final V2Activity self = (V2Activity) activity;
+        self.open(Tools.settings(self, new Runnable() {
+            @Override
+            public void run() {
+                self.goHome();
+            }
+        }, new Runnable() {
+            @Override
+            public void run() {
+                self.open(Kit.share(self, new Runnable() {
+                    @Override
+                    public void run() {
+                        self.goHome();
+                    }
+                }));
+            }
+        }, new Runnable() {
+            @Override
+            public void run() {
+                self.open(Kit.share(self, new Runnable() {
+                    @Override
+                    public void run() {
+                        self.goHome();
+                    }
+                }));
             }
         }));
     }
@@ -60,12 +118,29 @@ public final class V2Activity extends Activity {
     /** Which tile screen is open, so a permission answer can rebuild it in place. */
     private String openTile = "";
 
+    /**
+     * A cable going in or out is the one thing that changes the USB screen while
+     * it is up, so the screen is rebuilt rather than left showing a stale count.
+     * Registered while the activity is alive and only while the app is in front,
+     * which is why the inspector still has its own scan button.
+     */
+    private final BroadcastReceiver usbChanges = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if ("USB".equals(openTile)) {
+                showUsb(V2Activity.this);
+            }
+        }
+    };
+    private boolean usbListenerRegistered;
+
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         root = new FrameLayout(this);
         root.setBackground(Ui.background(this));
         setContentView(root);
+        registerUsbListener();
         home = build();
         show(home);
     }
@@ -107,6 +182,17 @@ public final class V2Activity extends Activity {
         });
         scroll.requestApplyInsets();
         root.addView(scroll);
+
+        // The screen arrives instead of snapping into place: a short fade and a
+        // small lift, both composited properties, so opening a tile reads as a
+        // page turning rather than a repaint. 190 ms is under the point where a
+        // tap starts to feel slow.
+        pad.setAlpha(0f);
+        pad.setTranslationY(Ui.dp(this, 14));
+        pad.animate().alpha(1f).translationY(0f)
+                .setDuration(190)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f))
+                .start();
     }
 
     private void open(View screen) {
@@ -119,6 +205,35 @@ public final class V2Activity extends Activity {
         openTile = "";
         home = build();
         show(home);
+    }
+
+    private void registerUsbListener() {
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(android.hardware.usb.UsbManager.ACTION_USB_DEVICE_ATTACHED);
+        filter.addAction(android.hardware.usb.UsbManager.ACTION_USB_DEVICE_DETACHED);
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                registerReceiver(usbChanges, filter, Context.RECEIVER_EXPORTED);
+            } else {
+                registerReceiver(usbChanges, filter);
+            }
+            usbListenerRegistered = true;
+        } catch (RuntimeException ignored) {
+            // Without the listener the screen still has its scan button.
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (usbListenerRegistered) {
+            try {
+                unregisterReceiver(usbChanges);
+            } catch (RuntimeException ignored) {
+                // Already unregistered.
+            }
+            usbListenerRegistered = false;
+        }
+        super.onDestroy();
     }
 
     @Override
@@ -521,6 +636,23 @@ public final class V2Activity extends Activity {
                 toast("GPX written, " + (text.length() / 1024 + 1) + " kB.");
             } catch (IOException e) {
                 toast("Could not write the GPX: " + e.getMessage());
+            }
+            return;
+        }
+        if (request == REQ_USB_JSON) {
+            if (result != RESULT_OK || uri == null) {
+                return;
+            }
+            String text = UsbInspect.takePendingJson();
+            if (text == null) {
+                toast("The report was lost while the picker was open - read the device again.");
+                return;
+            }
+            try {
+                Saf.writeText(this, uri, text);
+                toast("JSON written, " + text.length() + " bytes.");
+            } catch (IOException e) {
+                toast("Could not write the JSON: " + e.getMessage());
             }
             return;
         }

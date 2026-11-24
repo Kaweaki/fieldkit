@@ -2,6 +2,8 @@ package se.blimark.fieldkit.v2;
 
 import android.app.Activity;
 import android.app.WallpaperManager;
+
+import se.blimark.fieldkit.UsbReport;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
@@ -70,16 +72,46 @@ public final class Kit {
         LinearLayout column = Tools.screen(activity, "LINK",
                 "what is plugged in, what is in the air", back);
 
+        String power = Hardware.powerSource(activity);
+        String host = Hardware.hostDevices(activity);
+        String tether = Hardware.tetherInterfaces();
+        boolean tethered = !tether.startsWith("none") && !tether.startsWith("the kernel");
         LinearLayout usb = Ui.section(activity, "usb - otg",
-                "Identify and talk to what is on the cable", "No USB cable");
-        usb.addView(Ui.note(activity, "USB host is not in this build. The shipped app read "
-                + "boards and serial bridges on an OTG cable; this app has no USB code at all."));
+                "What is on the end of the cable",
+                "Read from the phone itself - no permission, no port opened");
+        usb.addView(Ui.row(activity, "Power in", power.toUpperCase(Locale.US), null));
+        usb.addView(Ui.divider(activity));
+        usb.addView(Ui.row(activity, "Host port",
+                host.startsWith("0 ") ? "EMPTY" : host.startsWith("no ") ? "UNKNOWN" : "DEVICES",
+                null));
+        usb.addView(Ui.divider(activity));
+        usb.addView(Ui.row(activity, "USB tethering", tethered ? "ON" : "OFF", null));
+        usb.addView(Ui.note(activity, "Host port: " + host));
+        usb.addView(Ui.note(activity, "Tether link: " + tether + ". Tethering is what makes "
+                + "the phone appear as a network device to the computer; Android publishes it "
+                + "as a usb0, rndis0 or eth0 interface, and this card reads that list."));
+        usb.addView(Ui.button(activity, "INSPECT THE CABLE", Ui.AMBER, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                UsbInspect.prepare();
+                V2Activity.showUsb(activity);
+            }
+        }));
+        usb.addView(Ui.button(activity, "READ IT AGAIN", Ui.BLUE, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                V2Activity.showLink(activity);
+            }
+        }));
         column.addView(usb);
 
         LinearLayout pc = Ui.section(activity, "this pc",
                 "Open a link a computer can use", "not in this build");
-        pc.addView(Ui.note(activity, "The shipped app offered an ADB loopback link for a "
-                + "computer at the other end of the cable. This one does not."));
+        pc.addView(Ui.note(activity, "The cable readings above are as far as this build goes: "
+                + "it can see whether power is coming in, whether anything is attached to the "
+                + "host port and whether a tethered interface exists. The shipped app also ran "
+                + "an ADB loopback link, which needs the INTERNET permission this build does not "
+                + "have."));
         column.addView(pc);
 
         LinearLayout bt = Ui.section(activity, "bluetooth",
@@ -1050,6 +1082,140 @@ public final class Kit {
         out.append(lat).append('\t').append(lon).append('\t').append(name.replace('\t', ' '))
                 .append('\t').append(source.replace('\t', ' ')).append('\t').append(when);
         Store.put(activity, WAYPOINTS, out.toString());
+    }
+
+    // ---- usb ---------------------------------------------------------------
+
+    /**
+     * The inspector: what the port is, what is on it, and the descriptor blob the
+     * phone will only hand over for a device the user has allowed.
+     */
+    public static View usb(final Activity activity, final Runnable back) {
+        LinearLayout column = Tools.screen(activity, "USB",
+                "the port, the cable, and what answers on it", back);
+
+        LinearLayout port = Ui.section(activity, "the port",
+                UsbInspect.hostSupported(activity)
+                        ? "This phone can act as a USB host"
+                        : "This phone reports no USB host support",
+                "Reading it needs no permission");
+        port.addView(Ui.note(activity, "USB-C: " + UsbInspect.ports(activity)));
+        port.addView(Ui.note(activity, "AOA mode: " + UsbInspect.accessories(activity)));
+        port.addView(Ui.button(activity, "SCAN THE PORT AGAIN", Ui.BLUE,
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        V2Activity.showUsb(activity);
+                    }
+                }));
+        column.addView(port);
+
+        java.util.List<android.hardware.usb.UsbDevice> devices = UsbInspect.devices(activity);
+        LinearLayout found = Ui.section(activity, "on the host port",
+                devices.isEmpty() ? "nothing attached" : devices.size() + " attached",
+                devices.isEmpty() ? "0 devices" : devices.size() + " devices");
+        if (devices.isEmpty()) {
+            found.addView(Ui.note(activity, "Plug a board or a bridge into an OTG cable and scan "
+                    + "again. Android asks once per device before its descriptors open; this app "
+                    + "reads them and closes the cable again, never writing to the device."));
+        }
+        for (android.hardware.usb.UsbDevice device : devices) {
+            found.addView(deviceCard(activity, device));
+        }
+        column.addView(found);
+
+        if (UsbInspect.lastReport.length() > 0) {
+            String[][] sections = sections(UsbInspect.lastReport);
+            for (String[] section : sections) {
+                Tools.accordion(activity, column, section[0], monoBody(activity, section[1]));
+            }
+            column.addView(Ui.button(activity, "SAVE THE REPORT AS JSON", Ui.GREEN,
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            UsbInspect.keepPendingJson();
+                            String stamp = new SimpleDateFormat("yyyyMMdd-HHmm", Locale.US)
+                                    .format(new Date());
+                            Saf.createFile(activity, "usb-" + stamp + ".json",
+                                    "application/json", V2Activity.REQ_USB_JSON);
+                        }
+                    }));
+        } else {
+            column.addView(Ui.note(activity, "No report yet. Read a device and its descriptors "
+                    + "appear here, one folded section each."));
+        }
+        return column;
+    }
+
+    private static View deviceCard(final Activity activity,
+                                   final android.hardware.usb.UsbDevice device) {
+        LinearLayout card = Ui.card(activity);
+        String vendorName = UsbReport.vendorName(device.getVendorId());
+        String productName = UsbReport.productName(device.getVendorId(), device.getProductId());
+        card.addView(Ui.text(activity, (productName.length() > 0 ? productName : "Unnamed device")
+                + (vendorName.length() > 0 ? " - " + vendorName : ""),
+                Ui.TITLE_DETAIL, Ui.TEXT));
+        card.addView(Ui.row(activity, "vendor", hex4(device.getVendorId()) + "  "
+                + device.getVendorId(), null));
+        card.addView(Ui.divider(activity));
+        card.addView(Ui.row(activity, "product", hex4(device.getProductId()) + "  "
+                + device.getProductId(), null));
+        card.addView(Ui.divider(activity));
+        card.addView(Ui.row(activity, "class", UsbReport.className(device.getDeviceClass())
+                .toUpperCase(Locale.US), null));
+        card.addView(Ui.note(activity, "node " + device.getDeviceName() + ", device id "
+                + device.getDeviceId() + ", " + device.getInterfaceCount() + " interfaces"
+                + (UsbInspect.lastDevice.equals(device.getDeviceName())
+                ? " - this is the one read below" : "")));
+        card.addView(Ui.button(activity, UsbInspect.hasPermission(activity, device)
+                ? "READ THIS DEVICE" : "ALLOW AND READ THIS DEVICE", Ui.AMBER,
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        UsbInspect.request(activity, device);
+                    }
+                }));
+        return card;
+    }
+
+    /** Splits the report on its "== TITLE" lines, one folded card each. */
+    private static String[][] sections(String report) {
+        java.util.List<String[]> out = new java.util.ArrayList<String[]>();
+        String title = "report";
+        StringBuilder body = new StringBuilder();
+        for (String line : report.split("\n")) {
+            if (line.startsWith("== ")) {
+                if (body.length() > 0) {
+                    out.add(new String[]{title, body.toString()});
+                }
+                title = line.substring(3);
+                body = new StringBuilder();
+            } else {
+                body.append(line).append('\n');
+            }
+        }
+        if (body.length() > 0) {
+            out.add(new String[]{title, body.toString()});
+        }
+        return out.toArray(new String[0][]);
+    }
+
+    /** Descriptors are columns of hex; they only line up in a monospaced face. */
+    private static View monoBody(Activity activity, String text) {
+        LinearLayout body = Ui.column(activity);
+        android.widget.TextView view = new android.widget.TextView(activity);
+        view.setText(text);
+        view.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11);
+        view.setTypeface(android.graphics.Typeface.MONOSPACE);
+        view.setTextColor(Ui.TEXT);
+        view.setLineSpacing(Ui.dp(activity, 2), 1f);
+        view.setTextIsSelectable(true);
+        body.addView(view);
+        return body;
+    }
+
+    private static String hex4(int value) {
+        return String.format(Locale.US, "0x%04x", value & 0xffff);
     }
 
     static String takePendingGpx() {

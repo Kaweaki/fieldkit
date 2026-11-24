@@ -29,6 +29,7 @@ public final class SelfTest {
         textLink();
         jpeg();
         geo();
+        usb();
 
         System.out.println();
         System.out.println(passed + " passed, " + failed + " failed");
@@ -239,6 +240,85 @@ public final class SelfTest {
         ok("gpx escapes the name", gpx.contains("camp &lt;north&gt; &amp; dry"));
         ok("gpx remembers the source", gpx.contains("typed in by hand"));
         ok("gpx closes", gpx.trim().endsWith("</gpx>"));
+    }
+
+    private static void usb() {
+        // A hand-built descriptor blob: device, one configuration, one interface
+        // with a bulk endpoint and an interrupt endpoint. CP2102 ids, 100 mA,
+        // bus powered with remote wakeup.
+        byte[] raw = bytes(
+                18, 0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 64,
+                0xc4, 0x10, 0x60, 0xea, 0x00, 0x01, 1, 2, 3, 1,
+                9, 0x02, 32, 0, 1, 1, 0, 0xa0, 50,
+                9, 0x04, 0, 0, 2, 0xff, 0, 0, 0,
+                7, 0x05, 0x81, 0x02, 0x00, 0x02, 0,
+                7, 0x05, 0x02, 0x03, 64, 0, 10);
+
+        equal("usb reads a 2.0 spec version", "2.0", UsbReport.usbVersion(0x0200));
+        equal("usb reads a 3.1 spec version", "3.1", UsbReport.usbVersion(0x0310));
+        equal("usb names mass storage", "mass storage", UsbReport.className(0x08));
+        equal("usb names HID", "human interface (HID)", UsbReport.className(0x03));
+        equal("usb names vendor specific", "vendor specific", UsbReport.className(0xff));
+        equal("usb knows Silicon Labs", "Silicon Labs (CP210x)", UsbReport.vendorName(0x10c4));
+        equal("usb knows the CP2102", "CP2102 serial", UsbReport.productName(0x10c4, 0xea60));
+        equal("usb leaves an unknown vendor blank", "", UsbReport.vendorName(0x1234));
+        equal("usb converts 2 mA units", 100, UsbReport.milliamp(50, 0x0200));
+        equal("usb converts 2 mA units at the maximum", 500, UsbReport.milliamp(250, 0x0200));
+        equal("usb converts 8 mA units for USB 3", 400, UsbReport.milliamp(50, 0x0300));
+        equal("usb says bus powered", "bus-powered, remote wakeup",
+                UsbReport.configFlags(0xa0));
+        equal("usb says self powered", "self-powered", UsbReport.configFlags(0xc0));
+
+        String[] lines = UsbReport.parse(raw);
+        String text = join(lines);
+        ok("usb parses bcdUSB", text.contains("bcdUSB 0200 (USB 2.0)"));
+        ok("usb parses the control packet size", text.contains("bMaxPacketSize0 64 bytes"));
+        ok("usb parses the vendor id both ways", text.contains("idVendor 10c4 (4292)"));
+        ok("usb parses the product id both ways", text.contains("idProduct ea60 (60000)"));
+        ok("usb parses the string indices",
+                text.contains("manufacturer 1, product 2, serial 3"));
+        ok("usb parses the configuration", text.contains("configuration 1, 9 bytes"));
+        ok("usb converts bMaxPower", text.contains("100 mA requested"));
+        ok("usb parses the interface class", text.contains("interface 0 alt 0: vendor specific"));
+        ok("usb parses the bulk endpoint",
+                text.contains("endpoint 81 IN bulk, 512 bytes"));
+        ok("usb parses the interrupt endpoint",
+                text.contains("endpoint 02 OUT interrupt, 64 bytes, interval 10"));
+        equal("usb reads both endpoints", 2, countOf(text, "endpoint "));
+
+        byte[] cut = bytes(18, 0x01, 0x00, 0x02);
+        ok("usb survives a truncated blob", UsbReport.parse(cut).length > 0);
+        ok("usb survives a null blob", UsbReport.parse(null).length > 0);
+        ok("usb survives a zero length blob", UsbReport.parse(new byte[0]).length > 0);
+
+        String dump = UsbReport.hex(bytes(0x0a, 0x00, 0x41), 16);
+        ok("usb dumps hex with an offset", dump.startsWith("0000  0a 00 41 "));
+        ok("usb dumps the ascii column", dump.contains(".A"));
+        equal("usb escapes a quote", "a\\\"b", UsbReport.escape("a\"b"));
+        equal("usb escapes a newline", "a\\nb", UsbReport.escape("a\nb"));
+        equal("usb escapes a backslash", "a\\\\b", UsbReport.escape("a\\b"));
+
+        byte[] hid = bytes(0x05, 0x01, 0x09, 0x06, 0xa1, 0x01, 0xc0);
+        equal("usb names the HID usage page", "0x01 (generic desktop)",
+                UsbReport.hidUsages(hid));
+        equal("usb names two HID pages", "0x07 (keyboard), 0x0c (consumer control)",
+                UsbReport.hidUsages(bytes(0x05, 0x07, 0x05, 0x0c)));
+    }
+
+    private static byte[] bytes(int... values) {
+        byte[] out = new byte[values.length];
+        for (int i = 0; i < values.length; i++) {
+            out[i] = (byte) values[i];
+        }
+        return out;
+    }
+
+    private static String join(String[] lines) {
+        StringBuilder out = new StringBuilder();
+        for (String line : lines) {
+            out.append(line).append('\n');
+        }
+        return out.toString();
     }
 
     private static int countOf(String haystack, String needle) {

@@ -19,6 +19,11 @@
     <!-- No INTERNET, no storage permissions: files come through the system picker,
          and /Kiwix is read with the legacy flag below on Android 10 only. -->
 
+    <!-- USB host is optional: the inspector reports what it finds, and the app
+         still installs on a phone with no host port. No permission is needed to
+         list host-mode devices or to read a descriptor blob. -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+
     <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.compass" android:required="false" />

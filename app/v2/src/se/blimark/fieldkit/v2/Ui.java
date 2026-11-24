@@ -164,6 +164,11 @@ public final class Ui {
         android.widget.Button pill = pill(context, "\u2039  " + label, colour, 0, BORDER, 255,
                 listener);
         pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, PILL);
+        // The one control that hugs its label: a stretched back button reads as a
+        // header bar and pulls the eye away from the screen's title.
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        pill.setLayoutParams(params);
         return pill;
     }
 
@@ -351,8 +356,10 @@ public final class Ui {
         button.setBackground(shape);
         button.setOnClickListener(listener);
         pressable(button);
+        // Full width, like V1's controls: a pill that hugs its label leaves a dead
+        // strip on the right of the card and reads as an unfinished row.
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         params.topMargin = dp(context, 12);
         button.setLayoutParams(params);
         return button;
