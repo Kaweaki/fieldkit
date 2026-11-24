@@ -428,3 +428,57 @@ through the app's own screens, not its files. And on Git Bash `adb push` rewrite
 `/sdcard/...` into a Windows path, so putting a file on the phone from this
 machine needs `MSYS_NO_PATHCONV=1`.
 
+
+### The buttons, measured on the phone (2026-11-24, second pass)
+
+The owner's note was that the buttons should feel smooth and that Link's design
+was wrong. Both were real, and both were measured rather than judged.
+
+- **Link drew each send button around its label.** `SEND TO ROUGHBEAT
+  FC:58:FA:8E:FB:15` came out 748 px wide and `SEND TO ACTON BLUETOOTH
+  04:FE:A1:61:3D:82` 867 px, in the tile accent colour, one under the other, so
+  the column had no edge and the address was repeated in every label. It is now
+  one row per device - the name in white, the address in grey caps under it, a
+  divider between - with a `SEND` pill at 242 px on the right. `Ui.deviceRow` and
+  `Ui.smallButton` are the components; V1's own list rows are the model
+  (`Ui.row`: a line on the left, a tag on the right).
+- **Nothing in the UI moved when it was pressed.** Every control is a
+  `GradientDrawable`, which draws no ripple, so a tap was a silent state change.
+  `Ui.pressable` now settles the view under the finger (scale 0.96, alpha 0.80,
+  80 ms, `DecelerateInterpolator`) and releases it a little slower (180 ms,
+  `DecelerateInterpolator(1.6)`). Only scale and alpha, so the frames are
+  composited; the touch listener returns false, so the click still fires.
+  Measured on the SM-A505F by holding a SEND pill for 900 ms and taking a frame
+  mid-press: the amber box goes 241x104 to 231x100 px (0.96), the amber pixel
+  count 2808 to 2271 and the crop mean 33.0 to 31.4, and after release all three
+  are byte-identical to the idle frame. The click that followed reached the
+  handler - the screen answered `Type something to send.`
+
+### Two stub sections are now real
+
+- **`THE WHOLE APP` - pass FieldKit on as a file.** Reads the installed package
+  from `getPackageCodePath()`, writes it through `ACTION_CREATE_DOCUMENT`. Saved
+  `/sdcard/Download/fieldkit-20261124-1321.apk`, 123357 bytes, **SHA-256
+  `49a4d12c...`**, identical to `app/build/FieldKit-V2.apk`. The app said
+  `APK written, 120 kB, byte for byte.`
+- **`METADATA` - strip what a photo says about you.** `se.blimark.fieldkit.Jpeg`
+  walks the marker chain, drops APP1, APP13, every other vendor APPn block and
+  the comments, keeps APP0 and APP2, and copies the entropy-coded scan data
+  verbatim. Verified through the picker on `image0-3.jpg`: source 96542 bytes,
+  output 96448, exactly the APP1 (36 bytes) and APP13 (58 bytes) segments gone,
+  the 95837 bytes of scan data identical, the decoded pixels identical, and the
+  EXIF tag count 1 -> 0. A byte-level reconstruction of "source minus the dropped
+  segments" equals the file the app wrote. SelfTest gained seven cases for it
+  (65 passed, 0 failed) and `tests/test_java_sources.py` now lists `Jpeg` in
+  `PURE`, because it is plain Java on purpose.
+
+### Still stubs, with what each one is actually blocked on
+
+| Section | What it needs |
+|---|---|
+| `USB - OTG` | USB host code and a board on the cable; nothing on this phone to talk to, so it cannot be verified here |
+| `THIS PC` (ADB loopback) | `android.permission.INTERNET`, which this build deliberately does not have; adding it contradicts a promise the Help screen makes - the owner has to decide |
+| `SURVEY - ACTIVE SCAN` | a wifi scan and an encrypted log; the same INTERNET story plus a permission prompt on every use |
+| `LIBRARY` starter shelf | a shelf of articles, and rule 4 in `AGENTS.md` forbids downloading one |
+| `MAPS` crosshair / position / GPX | a map view, a location fix and a waypoint list - a screen's worth of work, not a control |
+| `WIDGET`, `APP LOCK`, any-file send | each needs its own screen and its own verification; none of them is a one-liner |

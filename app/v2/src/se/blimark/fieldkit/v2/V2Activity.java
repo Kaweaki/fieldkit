@@ -15,11 +15,14 @@ import android.widget.TextView;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 import se.blimark.fieldkit.Backup;
 import se.blimark.fieldkit.Insets;
+import se.blimark.fieldkit.Jpeg;
 import se.blimark.fieldkit.Perms;
 import se.blimark.fieldkit.Saf;
 import se.blimark.fieldkit.Torch;
@@ -33,6 +36,9 @@ public final class V2Activity extends Activity {
     static final int REQ_EXPORT = 5002;
     static final int REQ_IMPORT = 5001;
     static final int REQ_MBTILES = 5003;
+    static final int REQ_APK = 5004;
+    static final int REQ_PHOTO = 5005;
+    static final int REQ_PHOTO_SAVE = 5006;
     static final int REQ_TREE = Kit.REQ_TREE;
 
     private FrameLayout root;
@@ -432,6 +438,86 @@ public final class V2Activity extends Activity {
             }
             return;
         }
+        if (request == REQ_APK) {
+            if (result != RESULT_OK || uri == null) {
+                return;
+            }
+            InputStream in = null;
+            OutputStream out = null;
+            try {
+                in = new FileInputStream(getPackageCodePath());
+                out = getContentResolver().openOutputStream(uri, "wt");
+                if (out == null) {
+                    throw new IOException("the document could not be opened for writing");
+                }
+                byte[] chunk = new byte[64 * 1024];
+                int read;
+                long total = 0;
+                while ((read = in.read(chunk)) > 0) {
+                    out.write(chunk, 0, read);
+                    total += read;
+                }
+                out.flush();
+                toast("APK written, " + (total / 1024) + " kB, byte for byte.");
+            } catch (IOException e) {
+                toast("Could not write the APK: " + e.getMessage());
+            } finally {
+                closeQuietly(in);
+                closeQuietly(out);
+            }
+            return;
+        }
+        if (request == REQ_PHOTO) {
+            if (result != RESULT_OK || uri == null) {
+                return;
+            }
+            try {
+                byte[] raw = readBytes(uri);
+                byte[] clean = Jpeg.strip(raw);
+                String name = Saf.displayName(this, uri);
+                if (name == null || name.length() == 0) {
+                    name = "photo.jpg";
+                }
+                Kit.pendingPhoto = clean;
+                Kit.pendingPhotoName = "fieldkit-clean-" + Saf.safeName(name);
+                toast("Stripped " + (raw.length - clean.length) + " bytes of metadata.");
+                open(Kit.share(this, new Runnable() {
+                    @Override
+                    public void run() {
+                        goHome();
+                    }
+                }));
+            } catch (IllegalArgumentException e) {
+                toast("That file is not a JPEG: " + e.getMessage());
+            } catch (IOException e) {
+                toast("Could not read the photo: " + e.getMessage());
+            }
+            return;
+        }
+        if (request == REQ_PHOTO_SAVE) {
+            if (result != RESULT_OK || uri == null) {
+                return;
+            }
+            if (Kit.pendingPhoto == null) {
+                toast("The cleaned photo was lost while the picker was open - pick it again.");
+                return;
+            }
+            OutputStream out = null;
+            try {
+                out = getContentResolver().openOutputStream(uri, "wt");
+                if (out == null) {
+                    throw new IOException("the document could not be opened for writing");
+                }
+                out.write(Kit.pendingPhoto);
+                out.flush();
+                toast("Cleaned photo written, " + (Kit.pendingPhoto.length / 1024) + " kB.");
+            } catch (IOException e) {
+                toast("Could not write the photo: " + e.getMessage());
+            } finally {
+                closeQuietly(out);
+            }
+            return;
+        }
         if (request == REQ_TREE) {
             if (result != RESULT_OK || uri == null) {
                 return;
@@ -490,6 +576,34 @@ public final class V2Activity extends Activity {
                 goHome();
             }
             toast(Perms.hasRadio(this) ? "Radio granted." : "Radio still refused.");
+        }
+    }
+
+    private byte[] readBytes(Uri uri) throws IOException {
+        InputStream in = getContentResolver().openInputStream(uri);
+        if (in == null) {
+            throw new IOException("the picker returned no stream");
+        }
+        try {
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            byte[] chunk = new byte[8192];
+            int read;
+            while ((read = in.read(chunk)) > 0) {
+                buffer.write(chunk, 0, read);
+            }
+            return buffer.toByteArray();
+        } finally {
+            in.close();
+        }
+    }
+
+    private static void closeQuietly(java.io.Closeable stream) {
+        if (stream != null) {
+            try {
+                stream.close();
+            } catch (IOException ignored) {
+                // Nothing useful to do on close failure.
+            }
         }
     }
 

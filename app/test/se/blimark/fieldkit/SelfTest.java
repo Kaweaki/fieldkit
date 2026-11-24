@@ -27,6 +27,7 @@ public final class SelfTest {
         ice();
         backup();
         textLink();
+        jpeg();
 
         System.out.println();
         System.out.println(passed + " passed, " + failed + " failed");
@@ -132,6 +133,81 @@ public final class SelfTest {
         equal("null rejected", null, TextLink.parse(null));
         ok("long text is cut", TextLink.parse(TextLink.frame("a", 1, repeat("x", 900))).text.length() == TextLink.MAX_TEXT);
         ok("control characters folded", TextLink.parse(TextLink.frame("a", 1, "a\nb\rc")).text.indexOf('\n') < 0);
+    }
+
+    // ---------------------------------------------------------------- jpeg
+
+    private static void jpeg() {
+        byte[] app1 = segment(0xE1, utf8("Exif\0\0GPS 59.33,18.06"));
+        byte[] app0 = segment(0xE0, utf8("JFIF"));
+        byte[] comment = segment(0xFE, utf8("shot in Berlin"));
+        byte[] sos = segment(0xDA, new byte[0]);
+        byte[] scan = new byte[]{(byte) 0xFF, 0x00, 0x12, 0x34, (byte) 0xFF, (byte) 0xD9};
+        byte[] in = concat(new byte[][]{{(byte) 0xFF, (byte) 0xD8}, app1, app0, comment, sos,
+                scan});
+        byte[] out = Jpeg.strip(in);
+        ok("jpeg still starts with SOI", out.length > 2 && (out[0] & 0xFF) == 0xFF
+                && (out[1] & 0xFF) == 0xD8);
+        equal("jpeg drops exactly EXIF and the comment", in.length - out.length,
+                app1.length + comment.length);
+        ok("jpeg keeps the JFIF block", find(out, app0) >= 0);
+        ok("jpeg has no APP1 left", find(out, new byte[]{(byte) 0xFF, (byte) 0xE1}) < 0);
+        ok("jpeg keeps every scan byte", find(out, scan) >= 0);
+        ok("jpeg does not touch its input", in.length == app1.length + app0.length
+                + comment.length + sos.length + scan.length + 2);
+        try {
+            Jpeg.strip(utf8("hello"));
+            failed++;
+            System.out.println("FAIL jpeg refuses a text file: no exception");
+        } catch (IllegalArgumentException expected) {
+            passed++;
+            System.out.println("PASS jpeg refuses a text file");
+        }
+    }
+
+    private static byte[] segment(int marker, byte[] payload) {
+        byte[] out = new byte[payload.length + 4];
+        out[0] = (byte) 0xFF;
+        out[1] = (byte) marker;
+        out[2] = (byte) ((payload.length + 2) >> 8);
+        out[3] = (byte) (payload.length + 2);
+        System.arraycopy(payload, 0, out, 4, payload.length);
+        return out;
+    }
+
+    private static byte[] concat(byte[][] parts) {
+        int total = 0;
+        for (int i = 0; i < parts.length; i++) {
+            total += parts[i].length;
+        }
+        byte[] out = new byte[total];
+        int at = 0;
+        for (int i = 0; i < parts.length; i++) {
+            System.arraycopy(parts[i], 0, out, at, parts[i].length);
+            at += parts[i].length;
+        }
+        return out;
+    }
+
+    private static int find(byte[] haystack, byte[] needle) {
+        outer:
+        for (int i = 0; i + needle.length <= haystack.length; i++) {
+            for (int j = 0; j < needle.length; j++) {
+                if (haystack[i + j] != needle[j]) {
+                    continue outer;
+                }
+            }
+            return i;
+        }
+        return -1;
+    }
+
+    private static byte[] utf8(String value) {
+        try {
+            return value.getBytes("UTF-8");
+        } catch (java.io.UnsupportedEncodingException e) {
+            return value.getBytes();
+        }
     }
 
     // ---------------------------------------------------------------- harness

@@ -10,8 +10,10 @@ import android.graphics.drawable.Drawable;
 import android.text.InputType;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -223,11 +225,87 @@ public final class Ui {
         return panel;
     }
 
-    public static TextView headingRow(Context context, String title, String right) {
-        LinearLayout row = null;
-        TextView left = caps(context, title, 13f, AMBER);
-        TextView tail = caps(context, right, 12f, FAINT);
-        return left;
+    /**
+     * The whole animation language: a press settles under the finger and lets go
+     * a little slower. Both properties are scale and alpha, so the frames are
+     * composited and a grid of forty chips stays smooth on a 2019 phone.
+     */
+    public static View pressable(View view) {
+        view.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        v.animate().cancel();
+                        v.animate().scaleX(0.96f).scaleY(0.96f).alpha(0.80f)
+                                .setDuration(80)
+                                .setInterpolator(new DecelerateInterpolator())
+                                .start();
+                        break;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        v.animate().cancel();
+                        v.animate().scaleX(1f).scaleY(1f).alpha(1f)
+                                .setDuration(180)
+                                .setInterpolator(new DecelerateInterpolator(1.6f))
+                                .start();
+                        break;
+                    default:
+                        break;
+                }
+                // Never claim the touch: the click listener still has to fire.
+                return false;
+            }
+        });
+        return view;
+    }
+
+    /**
+     * The compact control for a list row - Link's SEND - at 40 dp, with the same
+     * language as every other button: caps, an outline, and the press animation.
+     */
+    public static android.widget.Button smallButton(Context context, String label, int colour,
+                                                    View.OnClickListener listener) {
+        android.widget.Button button = new android.widget.Button(context);
+        button.setText(label.toUpperCase());
+        button.setAllCaps(false);
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, PILL);
+        button.setLetterSpacing(0.10f);
+        button.setTypeface(button.getTypeface(), android.graphics.Typeface.BOLD);
+        button.setTextColor(colour);
+        button.setGravity(Gravity.CENTER);
+        button.setMinHeight(dp(context, 40));
+        button.setMinimumHeight(dp(context, 40));
+        button.setMinimumWidth(dp(context, 92));
+        button.setPadding(dp(context, 16), dp(context, 10), dp(context, 16), dp(context, 10));
+        button.setBackground(roundRect(0, alpha(colour, 0.55f), RADIUS_CONTROL, context));
+        button.setOnClickListener(listener);
+        pressable(button);
+        return button;
+    }
+
+    /**
+     * One device on Link: the name and its address on the left, one button on the
+     * right. V1 builds its lists this way - a line and a tag - and it keeps a
+     * column of buttons the same width instead of letting each label size itself.
+     */
+    public static LinearLayout deviceRow(Context context, String name, String address,
+                                         int accent, View.OnClickListener listener) {
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(context, 10), 0, dp(context, 10));
+        LinearLayout words = new LinearLayout(context);
+        words.setOrientation(LinearLayout.VERTICAL);
+        words.setLayoutParams(new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        words.addView(text(context, name, BODY, TEXT));
+        android.widget.TextView mac = caps(context, address, LABEL, MUTED);
+        mac.setPadding(0, dp(context, 2), 0, 0);
+        words.addView(mac);
+        row.addView(words);
+        row.addView(smallButton(context, "SEND", accent, listener));
+        return row;
     }
 
     /**
@@ -272,6 +350,7 @@ public final class Ui {
                 Color.green(stroke), Color.blue(stroke)));
         button.setBackground(shape);
         button.setOnClickListener(listener);
+        pressable(button);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         params.topMargin = dp(context, 12);
@@ -400,6 +479,7 @@ public final class Ui {
                 context));
         view.setPadding(dp(context, 12), dp(context, 14), dp(context, 12), dp(context, 14));
         view.setOnClickListener(listener);
+        pressable(view);
         return view;
     }
 

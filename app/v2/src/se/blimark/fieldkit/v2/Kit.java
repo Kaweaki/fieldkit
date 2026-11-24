@@ -28,6 +28,8 @@ import android.widget.TextView;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+
+import se.blimark.fieldkit.Saf;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -54,6 +56,9 @@ public final class Kit {
     };
 
     private static String pendingExport;
+    /** The cleaned JPEG waiting to be saved, and the name to offer for it. */
+    static byte[] pendingPhoto;
+    static String pendingPhotoName;
     static String mapsReport;
 
     private Kit() {
@@ -106,14 +111,14 @@ public final class Kit {
                             | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
             final TextView status = Ui.note(activity, "");
             bt.addView(Ui.fieldBlock(activity, "Message", message));
+            boolean first = true;
             for (final BluetoothDevice device : bonded) {
-                String label;
-                try {
-                    label = device.getName() + "  " + device.getAddress();
-                } catch (SecurityException e) {
-                    label = device.getAddress();
+                String[] described = describe(device);
+                if (!first) {
+                    bt.addView(Ui.divider(activity));
                 }
-                bt.addView(Ui.button(activity, "SEND TO " + label, Ui.TEAL,
+                first = false;
+                bt.addView(Ui.deviceRow(activity, described[0], described[1], Ui.AMBER,
                         new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
@@ -136,6 +141,25 @@ public final class Kit {
                 + "sequence number and the text, with tabs and newlines folded so a message can "
                 + "never split in half."));
         return column;
+    }
+
+    /**
+     * A paired device's name and address, without letting a missing name or a
+     * revoked permission take the whole screen down.
+     */
+    private static String[] describe(BluetoothDevice device) {
+        String name = null;
+        String address = "";
+        try {
+            name = device.getName();
+            address = device.getAddress() == null ? "" : device.getAddress();
+        } catch (SecurityException e) {
+            // Read on a phone whose radio grant was revoked under the screen.
+        }
+        if (name == null || name.length() == 0) {
+            name = "unnamed device";
+        }
+        return new String[]{name, address};
     }
 
     private static void send(final Activity activity, final BluetoothDevice device,
@@ -176,11 +200,25 @@ public final class Kit {
         LinearLayout column = Tools.screen(activity, "SHARE",
                 "hand it on by your hand, or not at all", back);
 
+        long apkBytes = new File(activity.getApplicationInfo().sourceDir).length();
         LinearLayout app = Ui.section(activity, "the whole app",
-                "Pass FieldKit on as a file", "not in this build");
-        app.addView(Ui.note(activity, "The shipped app could write its own APK to a folder "
-                + "so the next phone could install it. This build has no file provider, so it "
-                + "cannot hand its own package over - copy it from a computer instead."));
+                "Pass FieldKit on as a file",
+                (apkBytes / 1024) + " kB, written byte for byte");
+        app.addView(Ui.note(activity, "This is the package Android installed on this phone, "
+                + "read from its own path and written unchanged, so the next phone can install "
+                + "the same build. It carries this build's signature - a debug one - so the "
+                + "phone at the other end will ask before it takes it."));
+        app.addView(Ui.button(activity, "SAVE THE APK AS A FILE", Ui.AMBER,
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        String stamp = new SimpleDateFormat("yyyyMMdd-HHmm", Locale.US)
+                                .format(new Date());
+                        Saf.createFile(activity, "fieldkit-" + stamp + ".apk",
+                                "application/vnd.android.package-archive",
+                                V2Activity.REQ_APK);
+                    }
+                }));
         column.addView(app);
 
         LinearLayout data = Ui.section(activity, "your data",
@@ -222,10 +260,33 @@ public final class Kit {
         column.addView(data);
 
         LinearLayout metadata = Ui.section(activity, "metadata - before it leaves",
-                "Strip what a photo says about you", "no photos in this build");
-        metadata.addView(Ui.note(activity, "The shipped app rewrote JPEG headers so a picture "
-                + "carried no time, place or device. This build never handles an image, so there "
-                + "is nothing to strip."));
+                "Strip what a photo says about you",
+                pendingPhoto == null ? "no photo picked yet" : pendingPhotoName);
+        metadata.addView(Ui.note(activity, pendingPhoto == null
+                ? "Pick a JPEG and this writes a second copy with the EXIF, IPTC, comment and "
+                + "vendor blocks cut out. The pixels and the scan data stay exactly as they "
+                + "were - only whole metadata segments are dropped - and the original file is "
+                + "never modified."
+                : pendingPhoto.length + " bytes ready, no metadata blocks left. Save it to a "
+                + "folder and the clean copy is the one that leaves."));
+        metadata.addView(Ui.button(activity, pendingPhoto == null
+                ? "PICK A PHOTO" : "PICK ANOTHER PHOTO", Ui.AMBER,
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Saf.pickFile(activity, V2Activity.REQ_PHOTO);
+                    }
+                }));
+        if (pendingPhoto != null) {
+            metadata.addView(Ui.button(activity, "SAVE THE CLEANED PHOTO", Ui.GREEN,
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            Saf.createFile(activity, pendingPhotoName, "image/jpeg",
+                                    V2Activity.REQ_PHOTO_SAVE);
+                        }
+                    }));
+        }
         column.addView(metadata);
 
         LinearLayout any = Ui.section(activity, "any file",
