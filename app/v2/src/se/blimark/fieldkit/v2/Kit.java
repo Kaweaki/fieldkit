@@ -78,7 +78,8 @@ public final class Kit {
         column.addView(pc);
 
         LinearLayout bt = Ui.section(activity, "bluetooth",
-                "Scan, read services, send commands", "Classic serial, no internet needed");
+                "Paired phones, one framed line each way",
+                "Classic serial, no internet needed");
         if (!Perms.hasRadio(activity)) {
             bt.addView(Ui.note(activity, Perms.explain(activity)));
             bt.addView(Ui.action(activity, "ASK FOR IT", new View.OnClickListener() {
@@ -303,13 +304,17 @@ public final class Kit {
                         + "the wallpaper on this phone", android.widget.Toast.LENGTH_LONG).show();
                 return;
             }
-            if (Build.VERSION.SDK_INT >= 24) {
+            boolean lockOnly = Build.VERSION.SDK_INT >= 24;
+            if (lockOnly) {
                 // The lock screen only: the home screen keeps whatever the owner chose.
                 manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_LOCK);
             } else {
+                // Before 7.0 there is no lock-only flag: this sets both surfaces.
                 manager.setBitmap(bitmap);
             }
-            android.widget.Toast.makeText(activity, "Lock screen updated",
+            android.widget.Toast.makeText(activity, lockOnly ? "Lock screen updated"
+                            : "Wallpaper set - this Android version has no lock-only setting, "
+                            + "so the home screen changed too",
                     android.widget.Toast.LENGTH_LONG).show();
         } catch (IOException e) {
             android.widget.Toast.makeText(activity, "The wallpaper could not be set: "
@@ -368,7 +373,8 @@ public final class Kit {
         LinearLayout home = Ui.section(activity, "home screen",
                 "The home screen keeps your own wallpaper", "");
         home.addView(Ui.note(activity, "V1 shipped a set of built-in home backgrounds. This "
-                + "build paints the lock screen only and never touches the home screen."));
+                + "build paints the lock screen only on Android 7 and newer; before that there "
+                + "is no lock-only setting, so the home screen changes too."));
         column.addView(home);
 
         column.addView(Ui.note(activity, Ice.MAX_LINES + " lines of at most " + Ice.MAX_LINE

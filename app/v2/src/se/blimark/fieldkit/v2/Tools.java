@@ -295,12 +295,13 @@ public final class Tools {
                 }
                 clean.setText(String.format(
                         "%.2f mL of %.0f%% bleach, about %d drops, wait %d minutes.",
-                        Water.bleachMl(p, l, !dirty) * (dirty ? 2 : 1),
-                        p, Water.bleachDrops(p, l, !dirty) * (dirty ? 2 : 1),
-                        Water.settleMinutes() * (dirty ? 2 : 1)));
+                        Water.bleachMl(p, l, dirty), p,
+                        Water.bleachDrops(p, l, dirty), Water.settleMinutes()));
             }
         }));
         waterBody.addView(clean);
+        waterBody.addView(Ui.note(activity, "Field dose: 2 mg/L available chlorine for clear "
+                + "water, 4 mg/L for cloudy, 30 minutes contact before drinking."));
         tool(activity, column, "01", "Chlorinate water", "bleach drops per litre", waterBody);
 
         final EditText orsWeight = Ui.number(activity, "body weight, kg",
@@ -356,7 +357,7 @@ public final class Tools {
         }));
         powerBody.addView(powerOut);
         tool(activity, column, "03", "Solar sizing",
-                "panel watts and battery amp-hours", powerBody);
+                "panel watts and battery mAh", powerBody);
 
         final EditText people = Ui.number(activity, "people",
                 Store.get(activity, "people", "1"));

@@ -178,3 +178,69 @@ accessibility tree, which is why it also works on a headless image.
   them. Decide whether V2 needs them before claiming the two apps match screen for
   screen.
 - Do not restyle V1 to match V2. V1 is the reference.
+
+## Session update, 2026-11-24
+
+The machine this ran on had no JDK 17, no SDK and no adb. JDK 17 and the SDK were
+installed at `C:\Users\dator\android-sdk`; the build, the self test, the Python
+suite and `apkcheck` all run again.
+
+### Fixed (the claims audit, item 2 above)
+
+- **Calculator 01 gave clear water the cloudy dose.** It passed `!dirty` where
+  `Water.bleachMl` expects `cloudy`, then multiplied by two as well, so clear
+  water was treated at 4 mg/L instead of 2 - a double dose of bleach. The flag
+  now goes straight through, and the card prints the dose it used (2 mg/L clear,
+  4 mg/L cloudy, 30 minutes), which the wiring doc already promised.
+- **Link's Bluetooth caption promised a scan.** It read "Scan, read services,
+  send commands" while the code lists bonded devices and sends one serial line,
+  and the card underneath says it never scans. Now "Paired phones, one framed
+  line each way".
+- **The lock-screen claim was unconditional.** `Kit.wallpaper` can only use
+  `FLAG_LOCK` from API 24; below that `setBitmap` sets both surfaces, while the
+  toast said "Lock screen updated". The toast and the Screens note now say so.
+- Calculator 03's row detail said "battery amp-hours" over a field asking for mAh.
+
+### Verified this session
+
+Build OK; `SelfTest` 58 passed, 0 failed; `python -m unittest discover -s tests -t .`
+30 tests OK; `apkcheck` 5 passed, 3 warned, 0 failed, 0 skipped.
+
+### Measured but not changed (item 1), with the numbers
+
+Comparing the committed bounds in `docs/screens/v1` against `docs/screens/v2`:
+
+| | V1 | V2 |
+|---|---|---|
+| home build label height | 36 px | 48 px |
+| home title height | 125 px | 161 px |
+| detail title height | 81 px | 111 px |
+| subtitle height | 44 px | 56 px |
+| tile caption height | 36 px | 48 px |
+| form field height | 96-103 px | 125 px |
+| chip row pitch | 143 px | 154 px |
+| Profile field labels | `Name` | `NAME` |
+
+V2 still runs about a third larger than V1 on every text size. Profile's field
+labels are caps where V1's form is sentence case; this is Profile-only, because
+V1's tile-screen headers ("USB - OTG", "THIS PC") genuinely are caps. The cost
+is visible in the pair: V1 fits Profile down to the allergy chips on one screen,
+V2 has not reached the Allergies label by the bottom of the frame. V1's Link
+header also carries a `⋮` overflow control that V2 does not draw.
+
+None of this was changed, because the phone was unreachable and an emulator is
+not set up on this machine: every one of those numbers would have been altered
+with no way to re-capture and compare. They are the next thing to do with a
+device attached.
+
+### Blocked
+
+The SM-A505F answered as `R58M52YG20N unauthorized`, then dropped off the bus, so
+`adb install -r`, the granted-state Link capture (item 3) and the phone run
+(item 4) are all still outstanding. Reconnect, authorize USB debugging, then:
+
+```
+ADB=<sdk>/platform-tools/adb FK_SERIAL=R58M52YG20N python tools/v2/tour.py \
+    --apk app/build/FieldKit-V2.apk
+```
+
