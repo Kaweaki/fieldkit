@@ -383,12 +383,48 @@ capturing the wrong screen for V1.
 
 Not exercised, and why: the lock-screen wallpaper (it replaces the owner's own
 lock screen, and the earlier session already verified `FLAG_LOCK` through the
-wallpaper record), a Bluetooth send (neither paired device is a serial port, so
-a send would only exercise the error path), and the SAF backup/restore round
-trip (the system picker needs a person to choose a folder). Those three are the
-next real tests.
+wallpaper record), and a Bluetooth send (neither paired device is a serial port,
+so a send would only exercise the error path). Those two are the next real
+tests.
 
-Tooling note: `build-v2.sh` signs with a debug keystore but the manifest is not
+### Backup and restore through the system picker, on the phone
+
+The session before this one wrote that the document picker "needs a person to
+choose a folder". **That was wrong**, and this run disproved it: the picker is
+driven end to end with `uiautomator dump` and taps, no human needed.
+
+- **Save.** `SAVE AS A FILE` opens `ACTION_CREATE_DOCUMENT` straight into
+  *Nedladdningar* - the folder the picker was last used in, so the destination
+  is remembered - with the name already filled in
+  (`fieldkit-20261124-1255.txt`) and a `SPARA` button at the bottom. Tapping
+  that button is the whole interaction. The app answered **`Backup written.`**
+  and `/sdcard/Download/fieldkit-20261124-1255.txt` existed at **97 bytes**, byte
+  for byte the 97 characters the Share screen had just printed:
+  `owner RESTORE TEST`, `weight 99`, `meds test meds`, `conditions asthma`.
+- **Restore.** The stored values were then changed inside the app (weight
+  99 -> 55, condition asthma -> diabetes) so that a restore had something to
+  prove. `RESTORE FROM A FILE` opens `ACTION_OPEN_DOCUMENT` in the same folder;
+  the file is the first card. Tapping it produced **`Restored 6 values.`**, the
+  home screen came back with `RESTORE TEST` in the header, and Share printed the
+  97-character text again - weight 99, asthma back, diabetes gone. So the round
+  trip closes on the app's own screens, not only in the file system.
+- **What the file does and does not carry.** `Store.all` reads SharedPreferences
+  only, so a backup holds the profile and the stored defaults and nothing else.
+  The sealed journal is `files/journal.fk` and stays on the phone; the Share
+  screen says exactly that ("The sealed journal is a separate file and stays
+  where it is"). There is no journal entry in a backup to reopen, which is why
+  the right/wrong-passphrase check belongs to the journal screen, where it was
+  run.
+- **The phone was left clean.** App data went back to its pre-test state through
+  the app's own path: a header-only backup restored through the same picker,
+  after which Share reads `1 lines, 18 characters`, Profile shows the defaults
+  (`HARALD BLIMARK`, 75 kg) and the journal screen says `No journal yet.` Both
+  files were deleted from `Downloads` (33 entries before, 33 after, no
+  `fieldkit-*` left).
+
+Tooling notes: `build-v2.sh` signs with a debug keystore but the manifest is not
 `debuggable`, so `run-as` refuses to look inside the app - every read above went
-through the app's own screens, not its files.
+through the app's own screens, not its files. And on Git Bash `adb push` rewrites
+`/sdcard/...` into a Windows path, so putting a file on the phone from this
+machine needs `MSYS_NO_PATHCONV=1`.
 
