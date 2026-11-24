@@ -39,6 +39,18 @@ public final class V2Activity extends Activity {
     static final int REQ_APK = 5004;
     static final int REQ_PHOTO = 5005;
     static final int REQ_PHOTO_SAVE = 5006;
+    static final int REQ_GPX = 5007;
+
+    /** Rebuilds the Maps tile after a fix is read or a waypoint changes. */
+    static void showMaps(final Activity activity) {
+        final V2Activity self = (V2Activity) activity;
+        self.open(Kit.maps(self, new Runnable() {
+            @Override
+            public void run() {
+                self.goHome();
+            }
+        }));
+    }
     static final int REQ_TREE = Kit.REQ_TREE;
 
     private FrameLayout root;
@@ -235,6 +247,7 @@ public final class V2Activity extends Activity {
                     openFor(tile[0]);
                 }
             });
+            Ui.pressable(view);
             GridLayout.LayoutParams params = new GridLayout.LayoutParams();
             params.width = 0;
             params.height = Ui.dp(this, 96);
@@ -491,6 +504,23 @@ public final class V2Activity extends Activity {
                 toast("That file is not a JPEG: " + e.getMessage());
             } catch (IOException e) {
                 toast("Could not read the photo: " + e.getMessage());
+            }
+            return;
+        }
+        if (request == REQ_GPX) {
+            if (result != RESULT_OK || uri == null) {
+                return;
+            }
+            String text = Kit.takePendingGpx();
+            if (text == null) {
+                toast("The waypoints were lost while the picker was open - save again.");
+                return;
+            }
+            try {
+                Saf.writeText(this, uri, text);
+                toast("GPX written, " + (text.length() / 1024 + 1) + " kB.");
+            } catch (IOException e) {
+                toast("Could not write the GPX: " + e.getMessage());
             }
             return;
         }

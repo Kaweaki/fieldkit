@@ -18,7 +18,7 @@ SRC = ROOT / "app" / "src"
 TEST = ROOT / "app" / "test"
 
 # These run on a plain JVM in SelfTest, so they must not touch the platform.
-PURE = {"Sun", "Water", "Power", "Ice", "Backup", "TextLink", "Jpeg", "SelfTest"}
+PURE = {"Sun", "Water", "Power", "Ice", "Backup", "TextLink", "Jpeg", "Geo", "SelfTest"}
 
 
 def java_files():

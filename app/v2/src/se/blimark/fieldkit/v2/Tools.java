@@ -446,6 +446,7 @@ public final class Tools {
                     holder.setVisibility(open ? View.GONE : View.VISIBLE);
                 }
             });
+            Ui.pressable(row);
             list.addView(row);
             list.addView(holder);
             if (i < PROTOCOLS.length - 1) {
@@ -573,6 +574,7 @@ public final class Tools {
                 ((TextView) head.getChildAt(1)).setText(open ? "+" : "\u2013");
             }
         });
+        Ui.pressable(head);
         column.addView(card);
     }
 
@@ -590,6 +592,7 @@ public final class Tools {
                         ? View.GONE : View.VISIBLE);
             }
         });
+        Ui.pressable(card.getChildAt(0));
         column.addView(card);
     }
 

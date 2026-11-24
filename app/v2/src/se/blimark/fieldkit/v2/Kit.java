@@ -28,8 +28,6 @@ import android.widget.TextView;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
-
-import se.blimark.fieldkit.Saf;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -38,8 +36,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
+import se.blimark.fieldkit.Geo;
 import se.blimark.fieldkit.Ice;
 import se.blimark.fieldkit.Perms;
+import se.blimark.fieldkit.Saf;
 import se.blimark.fieldkit.TextLink;
 import se.blimark.fieldkit.Torch;
 
@@ -820,46 +820,293 @@ public final class Kit {
 
     // ---- maps --------------------------------------------------------------
 
+    private static final String FIX_LAT = "fixlat";
+    private static final String FIX_LON = "fixlon";
+    private static final String FIX_SOURCE = "fixsource";
+    private static final String WAYPOINTS = "waypoints";
+    private static String pendingGpx;
+
     public static View maps(final Activity activity, final Runnable back) {
         LinearLayout column = Tools.screen(activity, "MAP",
-                "what is in the file, before you trust it", back);
+                "a crosshair, a fix you can name, and a file you can carry", back);
+
+        double lat = Geo.parse(Store.get(activity, FIX_LAT, ""));
+        double lon = Geo.parse(Store.get(activity, FIX_LON, ""));
+        boolean haveFix = Geo.valid(lat, lon);
+        String source = Store.get(activity, FIX_SOURCE, "nothing read yet");
+        boolean radio = Perms.hasRadio(activity);
+
+        LinearLayout where = Ui.section(activity, "position",
+                haveFix ? Geo.pair(lat, lon) : "No coordinate yet",
+                haveFix ? source : "read the last known fix, or type one in");
+        where.addView(Ui.note(activity, haveFix
+                ? "The crosshair and the GPX both use exactly this value."
+                : "Every value on this screen names where it came from. Nothing here is "
+                + "guessed, and nothing is looked up over a network."));
+        final EditText latField = Ui.textField(activity, "latitude",
+                haveFix ? Geo.format(lat) : "");
+        final EditText lonField = Ui.textField(activity, "longitude",
+                haveFix ? Geo.format(lon) : "");
+        if (!radio) {
+            where.addView(Ui.note(activity, Perms.explain(activity)));
+            where.addView(Ui.button(activity, "ASK FOR IT", Ui.AMBER,
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            Perms.ensureRadio(activity);
+                        }
+                    }));
+        } else {
+            where.addView(Ui.action(activity, "READ THE LAST KNOWN FIX",
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            String outcome = readFix(activity);
+                            android.widget.Toast.makeText(activity, outcome,
+                                    android.widget.Toast.LENGTH_LONG).show();
+                            V2Activity.showMaps(activity);
+                        }
+                    }));
+        }
+        where.addView(Ui.fieldBlock(activity, "Latitude", latField));
+        where.addView(Ui.fieldBlock(activity, "Longitude", lonField));
+        where.addView(Ui.button(activity, "USE THESE COORDINATES", Ui.AMBER,
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        double typedLat = Geo.parse(latField.getText().toString());
+                        double typedLon = Geo.parse(lonField.getText().toString());
+                        if (!Geo.valid(typedLat, typedLon)) {
+                            android.widget.Toast.makeText(activity, "That is not a coordinate: "
+                                    + "latitude -90 to 90, longitude -180 to 180.",
+                                    android.widget.Toast.LENGTH_LONG).show();
+                            return;
+                        }
+                        Store.put(activity, FIX_LAT, Geo.format(typedLat));
+                        Store.put(activity, FIX_LON, Geo.format(typedLon));
+                        Store.put(activity, FIX_SOURCE, "typed in by hand");
+                        V2Activity.showMaps(activity);
+                    }
+                }));
+        column.addView(where);
+
+        LinearLayout cross = Ui.section(activity, "crosshair",
+                haveFix ? "The point, at the centre" : "Nothing to centre on",
+                "No tiles: this draws a crosshair, not a map");
+        cross.addView(new CrosshairView(activity, haveFix));
+        cross.addView(Ui.note(activity, haveFix
+                ? Geo.pair(lat, lon) + " - " + source
+                : "Set a position above and the crosshair lands on it. There is no map "
+                + "renderer and no INTERNET permission, so no tile is ever fetched."));
+        column.addView(cross);
+
+        final List<String[]> points = waypoints(activity);
+        LinearLayout list = Ui.section(activity, "waypoints",
+                points.isEmpty() ? "No waypoints yet"
+                        : points.size() + (points.size() == 1 ? " waypoint" : " waypoints"),
+                "Kept in this app's store, and exported as GPX");
+        if (points.isEmpty()) {
+            list.addView(Ui.note(activity, "Set a position and add it here; the list is what "
+                    + "the GPX export writes."));
+        } else {
+            for (int i = 0; i < points.size(); i++) {
+                String[] row = points.get(i);
+                if (i > 0) {
+                    list.addView(Ui.divider(activity));
+                }
+                list.addView(Ui.row(activity, row[2] + "   " + row[0] + ", " + row[1],
+                        i + 1 < 10 ? "0" + (i + 1) : String.valueOf(i + 1), null));
+            }
+        }
+        final EditText name = Ui.textField(activity, "name for this point",
+                "P" + (points.size() + 1));
+        list.addView(Ui.fieldBlock(activity, "Name", name));
+        list.addView(Ui.button(activity, "ADD THE POINT ABOVE", Ui.AMBER,
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        double atLat = Geo.parse(Store.get(activity, FIX_LAT, ""));
+                        double atLon = Geo.parse(Store.get(activity, FIX_LON, ""));
+                        if (!Geo.valid(atLat, atLon)) {
+                            android.widget.Toast.makeText(activity, "Set a position first.",
+                                    android.widget.Toast.LENGTH_LONG).show();
+                            return;
+                        }
+                        String label = name.getText().toString().trim();
+                        if (label.length() == 0) {
+                            label = "P" + (points.size() + 1);
+                        }
+                        String when = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+                                .format(new Date());
+                        addPoint(activity, Geo.format(atLat), Geo.format(atLon), label,
+                                Store.get(activity, FIX_SOURCE, "unknown"), when);
+                        V2Activity.showMaps(activity);
+                    }
+                }));
+        if (!points.isEmpty()) {
+            list.addView(Ui.button(activity, "SAVE THE WAYPOINTS AS GPX", Ui.GREEN,
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            pendingGpx = Geo.gpx("FieldKit waypoints", waypoints(activity));
+                            String stamp = new SimpleDateFormat("yyyyMMdd-HHmm", Locale.US)
+                                    .format(new Date());
+                            Saf.createFile(activity, "fieldkit-" + stamp + ".gpx",
+                                    "application/gpx+xml", V2Activity.REQ_GPX);
+                        }
+                    }));
+            list.addView(Ui.button(activity, "CLEAR THE WAYPOINTS", Ui.RED,
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            Store.put(activity, WAYPOINTS, "");
+                            V2Activity.showMaps(activity);
+                        }
+                    }));
+        }
+        column.addView(list);
 
         LinearLayout file = Ui.section(activity, "map file",
                 mapsReport == null ? "No map loaded" : "A map has been read", mapsReport == null
                         ? "An .mbtiles file is one database with tiles inside."
                         : "The numbers below come from the file itself.");
-        file.addView(Ui.action(activity, "CHOOSE AN .MBTILES FILE", Ui.BLUE,
+        file.addView(Ui.button(activity, "CHOOSE AN .MBTILES FILE", Ui.BLUE,
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        se.blimark.fieldkit.Saf.pickFile(activity, V2Activity.REQ_MBTILES);
+                        Saf.pickFile(activity, V2Activity.REQ_MBTILES);
                     }
                 }));
-        column.addView(file);
-
-        LinearLayout report = Ui.section(activity, "the map",
-                "Metadata and tile count", "");
-        report.addView(Ui.body(activity, mapsReport == null
+        file.addView(Ui.body(activity, mapsReport == null
                 ? "Nothing read yet. Pick a file and this card fills in."
                 : mapsReport));
-        report.addView(Ui.note(activity, "This build does not draw tiles and does not read a "
-                + "position: it opens the database, reads the metadata and counts the tiles, "
-                + "which is how you find out whether the file you carried is the one you meant "
-                + "to carry."));
-        column.addView(report);
-
-        LinearLayout tools = Ui.section(activity, "map tools",
-                "Crosshair, zoom, my position", "not in this build");
-        tools.addView(Ui.note(activity, "No map view, so no crosshair, no zoom and no blue "
-                + "dot - that needs a renderer this app does not have."));
-        column.addView(tools);
-
-        LinearLayout waypoints = Ui.section(activity, "waypoints",
-                "Import and export GPX", "not in this build");
-        waypoints.addView(Ui.note(activity, "No waypoint list in this build, so there is "
-                + "nothing to export to GPX or to import from it."));
-        column.addView(waypoints);
+        file.addView(Ui.note(activity, "No tiles are drawn: this opens the database, reads "
+                + "its metadata and counts the tiles, which is how you find out whether the "
+                + "file you carried is the one you meant to carry."));
+        column.addView(file);
         return column;
+    }
+
+    /**
+     * The newest last known fix from any enabled provider, stored under a name
+     * that says where it came from. Never a default, never an estimate.
+     */
+    private static String readFix(Activity activity) {
+        android.location.LocationManager manager =
+                (android.location.LocationManager) activity.getSystemService(Context.LOCATION_SERVICE);
+        if (manager == null) {
+            return "This phone has no location service.";
+        }
+        android.location.Location best = null;
+        String provider = "";
+        try {
+            for (String name : manager.getProviders(true)) {
+                android.location.Location found = manager.getLastKnownLocation(name);
+                if (found != null && (best == null || found.getTime() > best.getTime())) {
+                    best = found;
+                    provider = name;
+                }
+            }
+        } catch (SecurityException e) {
+            return "Location is not allowed.";
+        }
+        if (best == null) {
+            Store.put(activity, FIX_LAT, "");
+            Store.put(activity, FIX_LON, "");
+            Store.put(activity, FIX_SOURCE, "no last known fix on this phone");
+            return "No provider holds a last known fix yet.";
+        }
+        long age = Math.max(0, System.currentTimeMillis() - best.getTime()) / 1000;
+        String when = age < 90 ? age + " s old" : (age / 60) + " min old";
+        Store.put(activity, FIX_LAT, Geo.format(best.getLatitude()));
+        Store.put(activity, FIX_LON, Geo.format(best.getLongitude()));
+        Store.put(activity, FIX_SOURCE, "Android last known fix (" + provider + "), " + when
+                + (best.hasAccuracy() ? ", +/- " + Math.round(best.getAccuracy()) + " m" : ""));
+        return "Read a fix from " + provider + ".";
+    }
+
+    private static List<String[]> waypoints(Activity activity) {
+        List<String[]> out = new ArrayList<String[]>();
+        String stored = Store.get(activity, WAYPOINTS, "");
+        if (stored.length() == 0) {
+            return out;
+        }
+        for (String line : stored.split("\n")) {
+            String[] parts = line.split("\t", -1);
+            if (parts.length >= 2 && Geo.valid(Geo.parse(parts[0]), Geo.parse(parts[1]))) {
+                out.add(parts);
+            }
+        }
+        return out;
+    }
+
+    private static void addPoint(Activity activity, String lat, String lon, String name,
+                                 String source, String when) {
+        String stored = Store.get(activity, WAYPOINTS, "");
+        StringBuilder out = new StringBuilder(stored);
+        if (out.length() > 0) {
+            out.append('\n');
+        }
+        out.append(lat).append('\t').append(lon).append('\t').append(name.replace('\t', ' '))
+                .append('\t').append(source.replace('\t', ' ')).append('\t').append(when);
+        Store.put(activity, WAYPOINTS, out.toString());
+    }
+
+    static String takePendingGpx() {
+        String text = pendingGpx;
+        pendingGpx = null;
+        return text;
+    }
+
+    /**
+     * The crosshair: a centre mark, a ring and four ticks, drawn on the phone.
+     * It is a coordinate readout, not a map, and it says so on the card.
+     */
+    private static final class CrosshairView extends View {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final boolean lit;
+
+        CrosshairView(Context context, boolean lit) {
+            super(context);
+            this.lit = lit;
+            float density = context.getResources().getDisplayMetrics().density;
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(density * 1.6f);
+            paint.setStrokeCap(Paint.Cap.ROUND);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(context, 180));
+            params.topMargin = Ui.dp(context, 12);
+            setLayoutParams(params);
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            float width = getWidth();
+            float height = getHeight();
+            float cx = width / 2f;
+            float cy = height / 2f;
+            float radius = Math.min(width, height) / 2f - 8f;
+            paint.setColor(0xFF272F3A);
+            canvas.drawCircle(cx, cy, radius, paint);
+            canvas.drawLine(cx, cy - radius, cx, cy + radius, paint);
+            canvas.drawLine(cx - radius, cy, cx + radius, cy, paint);
+            for (int i = 0; i < 4; i++) {
+                double angle = Math.PI / 2 * i;
+                float x = (float) (cx + Math.cos(angle) * radius);
+                float y = (float) (cy + Math.sin(angle) * radius);
+                canvas.drawCircle(x, y, 4f, paint);
+            }
+            paint.setColor(Ui.AMBER);
+            paint.setStrokeWidth(getResources().getDisplayMetrics().density * 2f);
+            canvas.drawLine(cx - 22f, cy, cx + 22f, cy, paint);
+            canvas.drawLine(cx, cy - 22f, cx, cy + 22f, paint);
+            if (lit) {
+                canvas.drawCircle(cx, cy, 7f, paint);
+            } else {
+                paint.setColor(0xFF3A4552);
+                canvas.drawCircle(cx, cy, 7f, paint);
+            }
+        }
     }
 
     /** Opens a copied .mbtiles and reports its metadata and tile count. */

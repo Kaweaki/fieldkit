@@ -28,6 +28,7 @@ public final class SelfTest {
         backup();
         textLink();
         jpeg();
+        geo();
 
         System.out.println();
         System.out.println(passed + " passed, " + failed + " failed");
@@ -208,6 +209,46 @@ public final class SelfTest {
         } catch (java.io.UnsupportedEncodingException e) {
             return value.getBytes();
         }
+    }
+
+    // ---------------------------------------------------------------- geo
+
+    private static void geo() {
+        ok("geo accepts a real coordinate", Geo.valid(59.3293, 18.0686));
+        ok("geo accepts the corners", Geo.valid(-90, 180));
+        ok("geo rejects latitude 91", !Geo.valid(91, 0));
+        ok("geo rejects longitude 181", !Geo.valid(0, 181));
+        ok("geo rejects NaN", !Geo.valid(Double.NaN, 0));
+        equal("geo formats six decimals", "59.329300", Geo.format(59.3293));
+        equal("geo pair north east", "59.329300 N, 18.068600 E", Geo.pair(59.3293, 18.0686));
+        equal("geo pair south west", "33.868800 S, 151.209300 W", Geo.pair(-33.8688, -151.2093));
+        equal("geo parses a comma", 59.3293, Geo.parse("59,3293"));
+        ok("geo refuses words", Double.isNaN(Geo.parse("hello")));
+        ok("geo refuses an empty field", Double.isNaN(Geo.parse("  ")));
+
+        java.util.List<String[]> points = new java.util.ArrayList<String[]>();
+        points.add(new String[]{"59.329300", "18.068600", "camp <north> & dry",
+                "typed in by hand", "2026-11-24T12:00:00Z"});
+        String gpx = Geo.gpx("FieldKit waypoints", points);
+        ok("gpx opens with the declaration",
+                gpx.startsWith("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"));
+        ok("gpx is version 1.1", gpx.contains("version=\"1.1\""));
+        equal("gpx has one waypoint", 1, countOf(gpx, "<wpt "));
+        ok("gpx keeps the screen's decimals",
+                gpx.contains("lat=\"59.329300\" lon=\"18.068600\""));
+        ok("gpx escapes the name", gpx.contains("camp &lt;north&gt; &amp; dry"));
+        ok("gpx remembers the source", gpx.contains("typed in by hand"));
+        ok("gpx closes", gpx.trim().endsWith("</gpx>"));
+    }
+
+    private static int countOf(String haystack, String needle) {
+        int count = 0;
+        int at = haystack.indexOf(needle);
+        while (at >= 0) {
+            count++;
+            at = haystack.indexOf(needle, at + needle.length());
+        }
+        return count;
     }
 
     // ---------------------------------------------------------------- harness

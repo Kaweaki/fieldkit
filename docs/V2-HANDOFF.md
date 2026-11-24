@@ -482,3 +482,49 @@ was wrong. Both were real, and both were measured rather than judged.
 | `LIBRARY` starter shelf | a shelf of articles, and rule 4 in `AGENTS.md` forbids downloading one |
 | `MAPS` crosshair / position / GPX | a map view, a location fix and a waypoint list - a screen's worth of work, not a control |
 | `WIDGET`, `APP LOCK`, any-file send | each needs its own screen and its own verification; none of them is a one-liner |
+
+### MAPS is a real screen now (2026-11-24, third pass)
+
+The tile used to open a card saying "not in this build". It now does the three
+things the section promised, with no invented data and no new permission.
+
+- **Position, with its source on screen.** `Kit.readFix` asks every enabled
+  provider for its last known fix through `LocationManager` and keeps the newest,
+  then stores the coordinates together with a sentence that says where they came
+  from. On the SM-A505F that produced `56.666975 N, 12.874832 E` under
+  `Android last known fix (passive), 90 min old, +/- 15 m`. A typed coordinate is
+  accepted as well and is labelled `typed in by hand`. Nothing is polled and no
+  request is made: this reads the fix Android already has. `ACCESS_FINE_LOCATION`
+  was already declared (capped at API 30, for the Bluetooth scan), so the
+  manifest is unchanged.
+- **Crosshair.** `Kit.CrosshairView` draws a ring, four ticks and a centre mark on
+  the phone - a coordinate readout, not a map. The card says so in one line: "No
+  tiles: this draws a crosshair, not a map". No tile is fetched and there is no
+  INTERNET permission in the build, so nothing can be.
+- **Waypoints and GPX.** A point is stored as `lat, lon, name, source, time` and
+  listed on the card; the list is what the export writes. `Geo.gpx` emits GPX 1.1
+  and `Geo` is plain Java, so eighteen new self-test cases cover the formatting,
+  the range check, the escaping and the document shape.
+- **Proven through SAF, byte for byte.** `SAVE THE WAYPOINTS AS GPX` opened the
+  same picker as the APK export and wrote `/sdcard/Download/fieldkit-20261124-1339.gpx`:
+  353 bytes, parsed on the PC with `xml.etree.ElementTree` - `gpx version="1.1"`
+  in the topografix namespace, one `<wpt lat="56.666975" lon="12.874832">`, the
+  values character for character what the position card printed, and `<desc>`
+  carrying the source and the timestamp.
+- **Press response, measured.** A 3 s hold on `READ THE LAST KNOWN FIX`: the amber
+  box goes 539x125 to 517x119 px (0.96), the amber pixel count 64044 to 58528 and
+  the crop mean 117.04 to 91.80; after release the crop is byte-identical to the
+  idle frame. The picker opening after a hold on `SAVE THE WAYPOINTS AS GPX` shows
+  the click still fires.
+
+### Every control responds now
+
+`Ui.row`, `Ui.toolRow`, the twelve home tiles, the accordion heads, the emergency
+rows and the calculator rows all call `Ui.pressable` as well. That covers all ten
+`setOnClickListener` sites in the v2 sources: the four in `Tools` are the
+emergency rows, the accordion head, the tool card and the chip grid - and the chip
+grid's chip comes from `Ui.chip`, which was already covered.
+
+What MAPS still cannot do, and why: draw map tiles. That needs a renderer and tile
+data, and the build has no INTERNET permission by design; the `.mbtiles` card
+inspects a file you carry instead of rendering it.

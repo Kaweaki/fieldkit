@@ -419,6 +419,7 @@ public final class Ui {
         }
         if (listener != null) {
             row.setOnClickListener(listener);
+            pressable(row);
         }
         return row;
     }
@@ -454,6 +455,7 @@ public final class Ui {
         row.addView(words);
         row.addView(caps(context, "\u203a", BODY, AMBER));
         row.setOnClickListener(listener);
+        pressable(row);
         return row;
     }
 
