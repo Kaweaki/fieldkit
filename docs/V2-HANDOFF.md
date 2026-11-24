@@ -574,3 +574,54 @@ hugging its label.
 hand-built descriptor blob (CP2102 ids, one configuration, a bulk and an
 interrupt endpoint), the 2 mA and 8 mA power conversions, truncated and empty
 blobs, the hex dump, JSON escaping and HID usage pages. 117 tests, 0 failed.
+
+## Measured motion, and tethering in both directions (2.9, second pass)
+
+**How the frames are counted.** Three outside sources were tried on the SM-A505F
+and two of them lie: `dumpsys gfxinfo` counts only frames the UI thread drew
+(alpha/translation run on the render thread, so a clean fade shows as 2-3
+frames), and `dumpsys SurfaceFlinger --latency` returns an all-zero buffer on
+this build. What is left is the app's own vsync cadence: `FrameMeter` posts one
+`Choreographer` callback chain per transition and per press touch and logs the
+gaps under `FieldKitFrames`, which is what the compositor actually scheduled.
+`tools/v2/frames.py` drives the app over adb and reads those lines back.
+
+**What the first measurement showed.** Before any fix, home -> Settings in the
+press window: 5 frames, mean 53 ms, max 133 ms. The split of one frame:
+layout 28.5 ms + draw 18.4 ms. Building the tile screen inside the tap handler
+cost 39-135 ms (`build=` log, warm runs included), and the grid background drew
+about 117 `drawLine` calls on every frame.
+
+**What changed.**
+
+- `Ui.background` paints one cached 28 px tile through a `BitmapShader` instead
+  of a loop of lines.
+- Tile screens, the home screen and every in-place rebuild are built on a worker
+  thread and attached on the UI thread, the way `AsyncLayoutInflater` does; a
+  build that throws is retried once on the UI thread.
+- The page is one `ScrollView` and one padded column, reused for every screen,
+  instead of a new pair per screen.
+- The new content is attached invisible, so its first layout pass does not draw;
+  the fade starts 20 ms later, once layout is done.
+- `withLayer()` was tried and removed: it made things worse (83-100 ms frames).
+
+**What it measures now** (17 samples per transition, `tools/v2/frames.py`):
+
+- Every transition: `frames=17 mean=16ms max=16ms late=0/16` - a clean 60 Hz
+  cadence, no frame over the vsync period.
+- Attach (the invisible layout pass) is logged separately: 21-46 ms, i.e. it
+  costs the same work as before but no longer lands inside a visible frame.
+- Press on an accordion header and on a pill: `frames=13 mean=16ms max=16ms
+  late=0/12` for down, and the same for up.
+- One regression found and fixed on the way: the anonymous builder inside
+  `goHome` called its own `build()`, which was a `StackOverflowError` and left
+  the back button doing nothing. All twelve tiles now open and return.
+
+**USB tethering, both directions.** USB-internetdelning was switched on in the
+phone's own Settings (Anslutning -> Mobil hotspot och Internetdelning). With it
+on, `getprop sys.usb.state` reads `rndis,adb`, `/sys/class/net` lists `rndis0`,
+adb stayed connected, and the Link card read `USB tethering -> ON` with
+`Tether link: rndis0 up`. Switching it off returns `mtp,adb` and no interface,
+and the same card reads `OFF` and `none - no usb0, rndis0 or eth0 interface`.
+adb dropped for a few seconds when the function set changed back; restarting the
+adb server (no replug) was enough. No crash in either state.

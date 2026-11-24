@@ -1,11 +1,14 @@
 package se.blimark.fieldkit.v2;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 import android.text.InputType;
 import android.util.TypedValue;
@@ -241,6 +244,7 @@ public final class Ui {
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
+                        FrameMeter.track("press-down", true);
                         v.animate().cancel();
                         v.animate().scaleX(0.96f).scaleY(0.96f).alpha(0.80f)
                                 .setDuration(80)
@@ -249,6 +253,7 @@ public final class Ui {
                         break;
                     case MotionEvent.ACTION_UP:
                     case MotionEvent.ACTION_CANCEL:
+                        FrameMeter.track("press-up", true);
                         v.animate().cancel();
                         v.animate().scaleX(1f).scaleY(1f).alpha(1f)
                                 .setDuration(180)
@@ -507,26 +512,40 @@ public final class Ui {
         return new GridDrawable(dp(context, 28));
     }
 
+    /** One tiled bitmap per step, shared by every screen: two draws, not 117 lines. */
+    private static Bitmap gridTile;
+    private static int gridStep;
+
+    private static Bitmap gridTile(int step) {
+        if (gridTile == null || gridStep != step) {
+            Bitmap tile = Bitmap.createBitmap(step, step, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(tile);
+            Paint line = new Paint();
+            line.setColor(0x0DFFFFFF);
+            line.setStrokeWidth(1f);
+            canvas.drawLine(0, 0, step, 0, line);
+            canvas.drawLine(0, 0, 0, step, line);
+            gridTile = tile;
+            gridStep = step;
+        }
+        return gridTile;
+    }
+
     private static final class GridDrawable extends Drawable {
         private final int step;
         private final Paint paint = new Paint();
 
         GridDrawable(int step) {
             this.step = Math.max(step, 8);
-            paint.setColor(0x0DFFFFFF);
-            paint.setStrokeWidth(1f);
+            paint.setShader(new BitmapShader(gridTile(this.step), Shader.TileMode.REPEAT,
+                    Shader.TileMode.REPEAT));
         }
 
         @Override
         public void draw(Canvas canvas) {
-            int width = getBounds().width();
-            int height = getBounds().height();
-            for (int x = 0; x < width; x += step) {
-                canvas.drawLine(x, 0, x, height, paint);
-            }
-            for (int y = 0; y < height; y += step) {
-                canvas.drawLine(0, y, width, y, paint);
-            }
+            // Measured on the phone: the line loop cost a long frame on every
+            // animation tick, because the grid sits behind every screen.
+            canvas.drawRect(getBounds(), paint);
         }
 
         @Override

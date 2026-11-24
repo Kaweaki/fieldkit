@@ -48,66 +48,69 @@ public final class V2Activity extends Activity {
     /** Rebuilds the Maps tile after a fix is read or a waypoint changes. */
     static void showMaps(final Activity activity) {
         final V2Activity self = (V2Activity) activity;
-        self.open(Kit.maps(self, new Runnable() {
+        self.openOnWorker(new ViewBuilder() {
             @Override
-            public void run() {
-                self.goHome();
+            public View build() {
+                return Kit.maps(self, self.home());
             }
-        }));
+        });
     }
 
     /** Opens the USB inspector, and marks it so an attach or detach rebuilds it. */
     static void showUsb(final Activity activity) {
         final V2Activity self = (V2Activity) activity;
         self.openTile = "USB";
-        self.open(Kit.usb(self, new Runnable() {
+        self.openOnWorker(new ViewBuilder() {
             @Override
-            public void run() {
-                self.goHome();
+            public View build() {
+                return Kit.usb(self, self.home());
             }
-        }));
+        });
     }
 
     /** Rebuilds the Link tile so the cable readings can be refreshed in place. */
     static void showLink(final Activity activity) {
         final V2Activity self = (V2Activity) activity;
-        self.open(Kit.link(self, new Runnable() {
+        self.openOnWorker(new ViewBuilder() {
             @Override
-            public void run() {
-                self.goHome();
+            public View build() {
+                return Kit.link(self, self.home());
             }
-        }));
+        });
     }
 
     /** Rebuilds the Settings tile so the battery readings can be refreshed. */
     static void showSettings(final Activity activity) {
         final V2Activity self = (V2Activity) activity;
-        self.open(Tools.settings(self, new Runnable() {
+        self.openOnWorker(new ViewBuilder() {
             @Override
-            public void run() {
-                self.goHome();
+            public View build() {
+                return Tools.settings(self, self.home(), shareAction(self), importAction(self));
             }
-        }, new Runnable() {
+        });
+    }
+
+    private static Runnable shareAction(final V2Activity self) {
+        return new Runnable() {
             @Override
             public void run() {
-                self.open(Kit.share(self, new Runnable() {
+                self.openOnWorker(new ViewBuilder() {
                     @Override
-                    public void run() {
-                        self.goHome();
+                    public View build() {
+                        return Kit.share(self, self.home());
                     }
-                }));
+                });
             }
-        }, new Runnable() {
+        };
+    }
+
+    private static Runnable importAction(final V2Activity self) {
+        return new Runnable() {
             @Override
             public void run() {
-                self.open(Kit.share(self, new Runnable() {
-                    @Override
-                    public void run() {
-                        self.goHome();
-                    }
-                }));
+                Saf.pickFile(self, REQ_IMPORT);
             }
-        }));
+        };
     }
     static final int REQ_TREE = Kit.REQ_TREE;
 
@@ -145,54 +148,100 @@ public final class V2Activity extends Activity {
         show(home);
     }
 
+    /**
+     * The page: one ScrollView and one padded column, reused for every screen.
+     * Creating them per screen cost a first-layout pass on every tap; swapping
+     * only the content child keeps the window insets and the scroll geometry.
+     */
+    private ScrollView scroll;
+    private LinearLayout pad;
+    private int padSide;
+    private int padTop;
+    private int padBottom;
+
     private void show(View screen) {
-        // A screen that was shown before still belongs to the old ScrollView.
+        // A screen that was shown before still belongs to the old column.
         android.view.ViewParent parent = screen.getParent();
         if (parent instanceof ViewGroup) {
             ((ViewGroup) parent).removeView(screen);
         }
-        root.removeAllViews();
-        current = screen;
 
         // V1 puts its content 16 dp from the side edge and its first control 8 dp
         // under the status bar; both were measured off its own bounds on the phone.
-        final int side = Ui.dp(this, 16);
-        final int top = Ui.dp(this, 8);
-        final int bottom = Ui.dp(this, 24);
-        final LinearLayout pad = new LinearLayout(this);
-        pad.setOrientation(LinearLayout.VERTICAL);
-        pad.setPadding(side, top, side, bottom);
+        if (pad == null) {
+            padSide = Ui.dp(this, 16);
+            padTop = Ui.dp(this, 8);
+            padBottom = Ui.dp(this, 24);
+            pad = new LinearLayout(this);
+            pad.setOrientation(LinearLayout.VERTICAL);
+            pad.setPadding(padSide, padTop, padSide, padBottom);
+            scroll = new ScrollView(this);
+            scroll.setClipToPadding(false);
+            scroll.addView(pad);
+            // The insets are added to the page padding rather than replacing it,
+            // so an edge-to-edge window still keeps its margins.
+            scroll.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+                @Override
+                public android.view.WindowInsets onApplyWindowInsets(View view,
+                                                                    android.view.WindowInsets insets) {
+                    pad.setPadding(padSide + insets.getSystemWindowInsetLeft(),
+                            padTop + insets.getSystemWindowInsetTop(),
+                            padSide + insets.getSystemWindowInsetRight(),
+                            padBottom + insets.getSystemWindowInsetBottom());
+                    return insets;
+                }
+            });
+            scroll.requestApplyInsets();
+            root.addView(scroll);
+        }
+        pad.removeAllViews();
         pad.addView(screen);
-
-        ScrollView scroll = new ScrollView(this);
-        scroll.setClipToPadding(false);
-        scroll.addView(pad);
-        // The insets are added to the page padding rather than replacing it,
-        // so an edge-to-edge window still keeps its margins.
-        scroll.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
-            @Override
-            public android.view.WindowInsets onApplyWindowInsets(View view,
-                                                                android.view.WindowInsets insets) {
-                pad.setPadding(side + insets.getSystemWindowInsetLeft(),
-                        top + insets.getSystemWindowInsetTop(),
-                        side + insets.getSystemWindowInsetRight(),
-                        bottom + insets.getSystemWindowInsetBottom());
-                return insets;
-            }
-        });
-        scroll.requestApplyInsets();
-        root.addView(scroll);
+        scroll.scrollTo(0, 0);
+        current = screen;
 
         // The screen arrives instead of snapping into place: a short fade and a
         // small lift, both composited properties, so opening a tile reads as a
         // page turning rather than a repaint. 190 ms is under the point where a
         // tap starts to feel slow.
+        //
+        // Posted to the next frame rather than started here: building a screen
+        // holds the UI thread for a frame or two, and an animator started inside
+        // that work has already spent part of its run before the first frame is
+        // drawn - which measured as a two-frame jump on the phone.
         pad.setAlpha(0f);
         pad.setTranslationY(Ui.dp(this, 14));
-        pad.animate().alpha(1f).translationY(0f)
-                .setDuration(190)
-                .setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f))
-                .start();
+        if (openStarted != 0) {
+            // Split of the tap: how much of it was building the view tree before
+            // any of it was laid out. Logged next to the frame cadence.
+            android.util.Log.i("FieldKitFrames", "build=" + openTile + " "
+                    + (android.os.SystemClock.uptimeMillis() - openStarted) + "ms");
+            openStarted = 0;
+        }
+        final String screenName = "screen=" + (openTile.length() == 0 ? "home" : openTile);
+        final long attachStart = android.os.SystemClock.uptimeMillis();
+        final LinearLayout page = pad;
+        // The first pass over a new screen costs a layout (~29 ms measured) and a
+        // draw (~18 ms). Invisible means that pass lays the tree out without
+        // drawing it, so the fade starts on the next frame with nothing left to
+        // compute; attached visible, the same work landed in one 62 ms frame.
+        page.setVisibility(View.INVISIBLE);
+        page.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                // The layout of the new tree happened while it was invisible; this
+                // is what that cost, reported next to the fade's own cadence.
+                android.util.Log.i("FieldKitFrames", "attach=" + screenName.substring(7)
+                        + " " + (android.os.SystemClock.uptimeMillis() - attachStart) + "ms");
+                FrameMeter.track(screenName, false);
+                page.setVisibility(View.VISIBLE);
+                page.setAlpha(0f);
+                page.setTranslationY(Ui.dp(V2Activity.this, 14));
+                page.animate().alpha(1f).translationY(0f)
+                        .setDuration(190)
+                        .setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f))
+                        .start();
+            }
+        }, 20);
     }
 
     private void open(View screen) {
@@ -201,10 +250,17 @@ public final class V2Activity extends Activity {
 
     private void goHome() {
         // Rebuilt each time so the header, the permission card and the footer
-        // reflect whatever the last screen changed.
+        // reflect whatever the last screen changed - and built off the UI thread,
+        // because twelve tiles with their icons cost as much as any tile screen.
         openTile = "";
-        home = build();
-        show(home);
+        openOnWorker(new ViewBuilder() {
+            @Override
+            public View build() {
+                // Qualified: inside this anonymous builder, build() is this method.
+                home = V2Activity.this.build();
+                return home;
+            }
+        });
     }
 
     private void registerUsbListener() {
@@ -377,18 +433,88 @@ public final class V2Activity extends Activity {
         return grid;
     }
 
-    private void openFor(String tile) {
-        openTile = tile;
-        final Runnable home = new Runnable() {
+    private long openStarted;
+
+    /** Counts taps, so a slow build from an earlier tile cannot land on a later one. */
+    private long openToken;
+
+    /**
+     * Opens a tile. The view tree is built on a worker thread and attached on the
+     * UI thread, the way AsyncLayoutInflater does it.
+     *
+     * Measured on the SM-A505F, building a screen in the tap handler cost 39-135
+     * ms - one long frame that also swallowed the start of the press animation
+     * and the screen fade. If a factory ever refuses to run off the UI thread the
+     * exception is caught and the same build runs on the UI thread instead, so a
+     * refusal costs speed, not the screen.
+     */
+    interface ViewBuilder {
+        View build();
+    }
+
+    private Runnable home() {
+        return new Runnable() {
             @Override
             public void run() {
                 goHome();
             }
         };
+    }
+
+    private void openFor(final String tile) {
+        openTile = tile;
+        openOnWorker(new ViewBuilder() {
+            @Override
+            public View build() {
+                return buildTile(tile, home());
+            }
+        });
+    }
+
+    /**
+     * Builds a screen off the UI thread and attaches it when it is ready, the way
+     * AsyncLayoutInflater does. A build that throws on the worker is retried once
+     * on the UI thread, so an unexpected refusal costs speed, not the screen.
+     */
+    private void openOnWorker(final ViewBuilder builder) {
+        openStarted = android.os.SystemClock.uptimeMillis();
+        final long token = ++openToken;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                View built = null;
+                try {
+                    built = builder.build();
+                } catch (Throwable ignored) {
+                    built = null;
+                }
+                final View screen = built;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (token != openToken) {
+                            return;
+                        }
+                        if (screen != null) {
+                            open(screen);
+                            return;
+                        }
+                        try {
+                            open(builder.build());
+                        } catch (RuntimeException error) {
+                            toast("This screen could not be built: " + error.getMessage());
+                        }
+                    }
+                });
+            }
+        }, "fieldkit-build").start();
+    }
+
+    private View buildTile(String tile, final Runnable home) {
         if ("Profile".equals(tile)) {
-            open(Tools.profile(this, home));
+            return Tools.profile(this, home);
         } else if ("Settings".equals(tile)) {
-            open(Tools.settings(this, home, new Runnable() {
+            return Tools.settings(this, home, new Runnable() {
                 @Override
                 public void run() {
                     open(Kit.share(V2Activity.this, new Runnable() {
@@ -403,28 +529,27 @@ public final class V2Activity extends Activity {
                 public void run() {
                     Saf.pickFile(V2Activity.this, REQ_IMPORT);
                 }
-            }));
+            });
         } else if ("Medical".equals(tile)) {
-            open(Tools.medical(this, home));
+            return Tools.medical(this, home);
         } else if ("Calculator".equals(tile)) {
-            open(Tools.calculator(this, home));
+            return Tools.calculator(this, home);
         } else if ("Link".equals(tile)) {
-            open(Kit.link(this, home));
+            return Kit.link(this, home);
         } else if ("Share".equals(tile)) {
-            open(Kit.share(this, home));
+            return Kit.share(this, home);
         } else if ("Screens".equals(tile)) {
-            open(Kit.screens(this, home));
+            return Kit.screens(this, home);
         } else if ("Library".equals(tile)) {
-            open(Kit.library(this, home));
+            return Kit.library(this, home);
         } else if ("Journal".equals(tile)) {
-            open(Kit.journal(this, home));
+            return Kit.journal(this, home);
         } else if ("Maps".equals(tile)) {
-            open(Kit.maps(this, home));
+            return Kit.maps(this, home);
         } else if ("Comms".equals(tile)) {
-            open(Kit.comms(this, home));
-        } else {
-            open(Tools.help(this, home));
+            return Kit.comms(this, home);
         }
+        return Tools.help(this, home);
     }
 
     private View tile(String title, String subtitle, View icon, int colour) {
