@@ -86,7 +86,10 @@ two apps done — it is the one device that is not an emulator.
    differs for no reason and record deliberate differences in `docs/V2-SCREENS.md`.
    *The type scale this exposed has been fixed in code (see the 2026-11-24 update
    below); the re-capture that proves it is still outstanding.*
-2. **Finish the claims audit.** Walk every button, tile, card and caption and
+2. **Finish the claims audit.** *Audited 2026-11-24: all four compute buttons,
+   both backup paths, the share sheet and the journal/seal path now have three
+   more fixes recorded below; the walk is done for this build.* Walk every
+   button, tile, card and caption and
    confirm the code behind it. Known-good so far: the torch Morse (logged by the
    camera service on the phone), the tone, the lock-screen-only wallpaper
    (`FLAG_LOCK`, verified by wallpaper record), the AES-256-GCM journal round trip,
@@ -202,6 +205,24 @@ suite and `apkcheck` all run again.
   `FLAG_LOCK` from API 24; below that `setBitmap` sets both surfaces, while the
   toast said "Lock screen updated". The toast and the Screens note now say so.
 - Calculator 03's row detail said "battery amp-hours" over a field asking for mAh.
+- **Calculator 04 always dosed for cloudy water.** It passed `cloudy = true`
+  outright, so the bleach figure was 4 mg/L even for water you can see through,
+  and nothing on screen said which dose it had used. The sentence now reads
+  "... to treat it all if it is cloudy", so the number matches the words.
+- **Calculator 03's two assumptions were invisible.** Its answers are 85% of a
+  battery's rated mAh (converter loss) and 70% of a panel's rating (real sun);
+  the card printed the reduced numbers with no word about why they are below
+  the arithmetic. The card now states both.
+- **A lost backup was reported as written.** If the process was rebuilt while
+  the file picker was open, the export text was gone and the save still wrote an
+  empty file and said "Backup written". It now says the backup was lost and
+  writes nothing.
+- Checked and found honest, so left alone: the copy-to-clipboard and share-the-
+  message buttons on SOS (the system chooser does the sending, and the screen
+  says this app never goes near a network), the SAF save and the SAF restore
+  (a restore really does clear and replace every stored value, which the screen
+  says), the send-the-backup chooser, and all four compute buttons' arithmetic
+  against `Water`/`Power`.
 
 ### Verified this session
 

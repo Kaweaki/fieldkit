@@ -378,8 +378,15 @@ public final class V2Activity extends Activity {
                 return;
             }
             String text = Kit.takePendingExport();
+            if (text == null) {
+                // The picker was open long enough for the process to be rebuilt, so
+                // the text is gone. Writing an empty file and calling it a backup
+                // would be a lie; say what happened instead.
+                toast("The backup was lost while the picker was open - save it again.");
+                return;
+            }
             try {
-                Saf.writeText(this, uri, text == null ? "" : text);
+                Saf.writeText(this, uri, text);
                 toast("Backup written.");
             } catch (IOException e) {
                 toast("Could not write: " + e.getMessage());

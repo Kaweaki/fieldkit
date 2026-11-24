@@ -357,6 +357,9 @@ public final class Tools {
             }
         }));
         powerBody.addView(powerOut);
+        powerBody.addView(Ui.note(activity, "Both sums are estimates: 85% of a battery's "
+                + "rated mAh is treated as usable through a converter, and a panel is "
+                + "credited with 70% of its rating in real sun."));
         tool(activity, column, "03", "Solar sizing",
                 "panel watts and battery mAh", powerBody);
 
@@ -388,7 +391,7 @@ public final class Tools {
                         perPerson, load));
                 out.append('\n');
                 out.append(String.format("About %.0f kg to carry, and %.0f mL of 5%% bleach "
-                        + "to treat it all.", drinking,
+                        + "to treat it all if it is cloudy.", drinking,
                         Water.bleachMl(5, drinking, true)));
                 daily.setText(out.toString());
             }
