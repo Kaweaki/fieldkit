@@ -59,9 +59,9 @@ public final class Sos {
                         back.run();
                     }
                 }));
-        column.addView(Ui.title(activity, "SOS", 30f));
+        column.addView(Ui.title(activity, "SOS", Ui.TITLE_DETAIL));
         column.addView(Ui.text(activity, "three short, three long, three short - recognised "
-                + "by anyone, and it needs no signal to send", 15f, Ui.MUTED));
+                + "by anyone, and it needs no signal to send", Ui.BODY, Ui.MUTED));
         column.addView(Ui.rule(activity));
         column.addView(Ui.spacer(activity, 6));
 
@@ -73,7 +73,7 @@ public final class Sos {
         flash.setLayoutParams(flashParams);
         column.addView(flash);
 
-        final TextView state = Ui.caps(activity, "IDLE", 13f, Ui.DIM);
+        final TextView state = Ui.caps(activity, "IDLE", Ui.NOTE, Ui.DIM);
         LinearLayout.LayoutParams stateParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         stateParams.topMargin = Ui.dp(activity, 10);
@@ -96,7 +96,7 @@ public final class Sos {
         }));
 
         final String message = preset(activity);
-        column.addView(Ui.caps(activity, "Preset message", 13f, Ui.AMBER));
+        column.addView(Ui.caps(activity, "Preset message", Ui.NOTE, Ui.AMBER));
         TextView preview = Ui.body(activity, message);
         preview.setPadding(0, Ui.dp(activity, 8), 0, Ui.dp(activity, 8));
         column.addView(preview);

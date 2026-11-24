@@ -36,8 +36,36 @@ Everything below was sampled from V1's own pixels at 440 dpi, not chosen.
 | card corners | 24 dp | cards, tiles, buttons |
 | control height | 48 dp | buttons, chips |
 | tile | 316 x 264 px, 8 dp gaps | the home grid |
-| header | grey caps build label, 44 sp title, 15 sp subtitle, amber rule fading right | home |
-| detail header | outlined back pill, 30 sp amber caps title, 15 sp subtitle, same rule | every tile |
+| chip | 48 dp tall, 4 dp gap between chips | every chip grid |
+| header | grey build label, 33 sp title, 11 sp subtitle, 1 dp amber rule fading right | home |
+| detail header | outlined back pill (10 sp), 22 sp amber caps title, 11 sp subtitle, same rule | every tile |
+
+### The type scale, measured in ink
+
+The first pass at these numbers read them off the accessibility bounds, which give
+a view's height - font padding included - and not the size of the letters. Every
+token came out about a third too large, so V2 drew 30 sp where V1 draws 22 sp and
+could not fit Profile on one screen. The numbers below were re-derived by
+measuring the ink of the same string in both captures (`docs/screens/v1` scaled
+2x, so both are in 1080 px), converting V1's cap height back to sp at 440 dpi.
+
+| Element | V1 ink (1080 px) | V1 | V2 now |
+|---|---|---|---|
+| home title `FIELDKIT` | 64 px | 33 sp | 33 sp |
+| detail title `PROFILE` | 40 px | 22 sp | 22 sp |
+| subtitle | 28 px | 11 sp | 11 sp |
+| body copy | - | 11 sp | 11 sp |
+| chip label `pregnant` | 28 px | 11 sp | 11 sp |
+| field label `Name` | 18 px | 9 sp, sentence case | 9 sp, sentence case |
+| field text `Person 1` | 26 px | 13 sp in a 96 px box | 13 sp in a 96 px box |
+| build label `FIELDKIT 2.8` | 16 px | 10 sp | 10 sp |
+| tile name / detail | - | 12 / 10 sp | 12 / 10 sp |
+| back pill `FIELDKIT` | 20 px | 10 sp | 10 sp |
+
+V2's sp values are kept as sp on purpose: a phone with enlarged system text
+should enlarge FieldKit too. The captures above were taken with the system font
+scale at its default - the status bar's own text measures 34 px of ink in both
+files, which is what rules out a font-scale difference between them.
 
 Tile accents, one per tile, as V1 draws them: Profile `#6E93B8`, Settings
 `#8A96A3`, Medical `#C76B63` on a `#1B1313` fill, Calculator `#C79A4E`, Link

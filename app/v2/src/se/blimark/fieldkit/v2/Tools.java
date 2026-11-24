@@ -50,9 +50,9 @@ public final class Tools {
                         }
                     }));
         }
-        column.addView(Ui.title(activity, title, 30f));
+        column.addView(Ui.title(activity, title, Ui.TITLE_DETAIL));
         if (subtitle != null && subtitle.length() > 0) {
-            column.addView(Ui.text(activity, subtitle, 15f, Ui.MUTED));
+            column.addView(Ui.text(activity, subtitle, Ui.BODY, Ui.MUTED));
         }
         column.addView(Ui.rule(activity));
         column.addView(Ui.spacer(activity, 6));
@@ -97,16 +97,16 @@ public final class Tools {
 
         final java.util.Set<String> conditions =
                 csv(Store.get(activity, "conditions", ""));
-        LinearLayout conditionCard = Ui.section(activity,
-                "conditions - tap all that apply", "", "");
+        LinearLayout conditionCard = Ui.card(activity);
+        conditionCard.addView(Ui.sentenceLabel(activity, "Conditions - tap all that apply"));
         conditionCard.addView(chipGrid(activity, CONDITIONS, conditions, "conditions"));
         column.addView(conditionCard);
 
         final java.util.Set<String> allergies = csv(Store.get(activity, "allergies_pick", ""));
         final EditText otherAllergies = Ui.textField(activity, "other allergies",
                 Store.get(activity, "allergies", ""));
-        LinearLayout allergyCard = Ui.section(activity,
-                "allergies - tap all that apply", "", "");
+        LinearLayout allergyCard = Ui.card(activity);
+        allergyCard.addView(Ui.sentenceLabel(activity, "Allergies - tap all that apply"));
         allergyCard.addView(chipGrid(activity, ALLERGIES, allergies, "allergies_pick"));
         allergyCard.addView(Ui.fieldBlock(activity, "Other allergies", otherAllergies));
         column.addView(allergyCard);
@@ -115,9 +115,10 @@ public final class Tools {
                 Store.get(activity, "meds", ""));
         final java.util.Set<String> load = csv(Store.get(activity, "workload", "moderate"));
         LinearLayout medCard = Ui.card(activity);
-        medCard.addView(Ui.label(activity, "regular medicines - name and where it is kept"));
+        medCard.addView(Ui.sentenceLabel(activity,
+                "Regular medicines - name and where it is kept"));
         medCard.addView(meds);
-        medCard.addView(Ui.label(activity, "usual workload"));
+        medCard.addView(Ui.sentenceLabel(activity, "Usual workload"));
         medCard.addView(chipGrid(activity, WORKLOAD, load, "workload"));
         column.addView(medCard);
 
@@ -551,12 +552,12 @@ public final class Tools {
         head.setOrientation(LinearLayout.HORIZONTAL);
         head.setGravity(android.view.Gravity.CENTER_VERTICAL);
         head.setPadding(0, Ui.dp(activity, 18), 0, Ui.dp(activity, 18));
-        TextView name = Ui.caps(activity, title, 13f, Ui.TEXT);
+        TextView name = Ui.caps(activity, title, Ui.NOTE, Ui.TEXT);
         name.setLetterSpacing(0.08f);
         name.setLayoutParams(new LinearLayout.LayoutParams(0,
                 LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         head.addView(name);
-        head.addView(Ui.caps(activity, "+", 15f, Ui.AMBER));
+        head.addView(Ui.caps(activity, "+", Ui.BODY, Ui.AMBER));
         card.addView(head);
         body.setVisibility(View.GONE);
         card.addView(body);
@@ -623,7 +624,7 @@ public final class Tools {
             params.height = Ui.dp(activity, 48);
             params.columnSpec = android.widget.GridLayout.spec(
                     android.widget.GridLayout.UNDEFINED, 1f);
-            params.setMargins(i % 2 == 0 ? 0 : Ui.dp(activity, 8), Ui.dp(activity, 8), 0, 0);
+            params.setMargins(i % 2 == 0 ? 0 : Ui.dp(activity, 4), Ui.dp(activity, 4), 0, 0);
             chip.setLayoutParams(params);
             grid.addView(chip);
         }

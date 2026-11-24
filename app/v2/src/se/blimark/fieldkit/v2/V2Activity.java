@@ -116,9 +116,9 @@ public final class V2Activity extends Activity {
         LinearLayout column = Ui.column(this);
 
         // V1 puts the build label above the title, in grey caps, and nothing else.
-        column.addView(Ui.caps(this, "FIELDKIT 2.9", 13f, Ui.MUTED));
-        column.addView(Ui.title(this, "FIELDKIT", 44f));
-        column.addView(Ui.text(this, "offline index + tools - tap a tile", 15f, Ui.MUTED));
+        column.addView(Ui.caps(this, "FIELDKIT 2.9", Ui.NOTE, Ui.MUTED));
+        column.addView(Ui.title(this, "FIELDKIT", Ui.TITLE_HOME));
+        column.addView(Ui.text(this, "offline index + tools - tap a tile", Ui.BODY, Ui.MUTED));
         column.addView(Ui.rule(this));
 
         column.addView(tileGrid());
@@ -135,9 +135,9 @@ public final class V2Activity extends Activity {
     private View sosBar() {
         LinearLayout bar = Ui.card(this, Ui.RED);
         bar.setBackground(Ui.roundRect(0xFF1B1313, Ui.RED, 24, this));
-        bar.addView(Ui.caps(this, "SOS", 13f, Ui.RED));
+        bar.addView(Ui.caps(this, "SOS", Ui.NOTE, Ui.RED));
         bar.addView(Ui.text(this, "torch and tone in Morse, plus a message ready to send",
-                15f, Ui.TEXT));
+                Ui.BODY, Ui.TEXT));
         bar.addView(Ui.action(this, "OPEN THE DISTRESS PANEL", Ui.RED,
                 new View.OnClickListener() {
                     @Override
@@ -164,8 +164,8 @@ public final class V2Activity extends Activity {
         }
         LinearLayout card = Ui.card(this, Ui.AMBER);
         card.setBackground(Ui.roundRect(0xFF16130A, Ui.AMBER, 24, this));
-        card.addView(Ui.caps(this, "RADIO LOCKED", 13f, Ui.AMBER));
-        card.addView(Ui.text(this, missing, 15f, Ui.TEXT));
+        card.addView(Ui.caps(this, "RADIO LOCKED", Ui.NOTE, Ui.AMBER));
+        card.addView(Ui.text(this, missing, Ui.BODY, Ui.TEXT));
         card.addView(Ui.action(this, "ASK FOR IT NOW", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -279,10 +279,10 @@ public final class V2Activity extends Activity {
         box.setBackground(Ui.roundRect(colour == Ui.RED ? Ui.RED_PANEL : Ui.PANEL, colour,
                 24, this));
         box.addView(icon);
-        TextView heading = Ui.text(this, title, 16f, Ui.TEXT);
+        TextView heading = Ui.text(this, title, Ui.TILE_TITLE, Ui.TEXT);
         heading.setGravity(Gravity.CENTER_HORIZONTAL);
         box.addView(heading);
-        TextView sub = Ui.text(this, subtitle, 13f, Ui.MUTED);
+        TextView sub = Ui.text(this, subtitle, Ui.TILE_SUB, Ui.MUTED);
         sub.setGravity(Gravity.CENTER_HORIZONTAL);
         box.addView(sub);
         return box;

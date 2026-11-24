@@ -84,6 +84,8 @@ two apps done — it is the one device that is not an emulator.
 1. **Compare the restyled tiles against V1 pixel by pixel.** Captures exist for all
    twelve; only home, Profile, Settings, Link and SOS were reviewed. Fix what
    differs for no reason and record deliberate differences in `docs/V2-SCREENS.md`.
+   *The type scale this exposed has been fixed in code (see the 2026-11-24 update
+   below); the re-capture that proves it is still outstanding.*
 2. **Finish the claims audit.** Walk every button, tile, card and caption and
    confirm the code behind it. Known-good so far: the torch Morse (logged by the
    camera service on the phone), the tone, the lock-screen-only wallpaper
@@ -232,6 +234,30 @@ None of this was changed, because the phone was unreachable and an emulator is
 not set up on this machine: every one of those numbers would have been altered
 with no way to re-capture and compare. They are the next thing to do with a
 device attached.
+
+### Type scale corrected (item 1)
+
+The drift table above said V2 runs a third larger than V1 on every text size. The
+cause is now known, and it was not a font scale: the tokens had been read off
+accessibility *view* heights, and a TextView's height is its font padding plus a
+line, not its type size. Measured in ink instead - the same string's cap height
+in both captures, with V1's half-size PNG doubled so both are in 1080 px - V1's
+detail title is 40 px of ink, which is 22 sp, not the 30 sp the table claimed.
+The status bar's own text measures 34 px in both files, which is what rules out
+different system font scales on the two captures.
+
+`Ui` now carries one named scale - `TITLE_HOME` 33, `TITLE_DETAIL` 22, `HEAD` 12,
+`BODY` 11, `NOTE` 10, `LABEL` 9, `INPUT` 13, `PILL` 10, `TILE_TITLE` 12,
+`TILE_SUB` 10 - and no call site passes a bare number any more. Fixed with it: the
+header rule is V1's 1 dp instead of 2; chips sit 4 dp apart instead of 8 (V1's
+pitch is 143 px, ours was 154); a field is 13 sp in a 96 px box, matching V1's
+96-103; and form labels are sentence case, "Name" not "NAME", because V1's forms
+are - that is the one place V1 does not use caps.
+
+**Not verified visually.** No device answered while this was written, so the new
+numbers have not been re-captured against V1. Build, self test, the Python suite
+and `apkcheck` are green; the pixel comparison is the first thing to run when the
+phone is back.
 
 ### Blocked
 

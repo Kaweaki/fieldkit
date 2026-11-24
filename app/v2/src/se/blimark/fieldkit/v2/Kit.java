@@ -842,7 +842,7 @@ public final class Kit {
                 "What can carry a message when there is no network.", back);
 
         final String briar = installed(activity, BRIAR);
-        column.addView(Ui.caps(activity, "Briar", 13f, Ui.AMBER));
+        column.addView(Ui.caps(activity, "Briar", Ui.NOTE, Ui.AMBER));
         if (briar == null) {
             column.addView(Ui.note(activity, "Briar is not installed on this phone. It is the "
                     + "mesh messenger V1 pointed at; without it this tile has nothing to open, "
@@ -860,7 +860,7 @@ public final class Kit {
             }));
         }
 
-        column.addView(Ui.caps(activity, "What this app can carry itself", 13f, Ui.AMBER));
+        column.addView(Ui.caps(activity, "What this app can carry itself", Ui.NOTE, Ui.AMBER));
         column.addView(Ui.body(activity,
                 "Bluetooth serial: short text to a paired phone, on the Link tile.\n"
                         + "The torch and the tone: an SOS anyone can see or hear, on the SOS bar.\n"

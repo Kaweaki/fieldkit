@@ -58,6 +58,33 @@ public final class Ui {
     public static final int CARD = PANEL;
     public static final int FAINT = DIM;
 
+    // ---- type scale --------------------------------------------------------
+    // Measured off V1's own glyphs, not chosen. Each value is V1's cap height in
+    // docs/screens/v1 converted back to sp at 440 dpi (cap height is about 0.71
+    // of the em in its font), and compared against V2's capture of the same
+    // string in the same pixel scale. The tokens V2 shipped were read from view
+    // heights, which include font padding, so every one of them was a third too
+    // large: the detail title arrived as 30 sp where V1 draws 22 sp.
+    /** Home title: V1's FIELDKIT is 64 px of ink, so 33 sp. */
+    public static final float TITLE_HOME = 33f;
+    /** Detail title: V1's PROFILE is 40 px of ink, so 22 sp. */
+    public static final float TITLE_DETAIL = 22f;
+    /** A card's own heading line. */
+    public static final float HEAD = 12f;
+    /** Subtitle, body copy, chip text and list rows. */
+    public static final float BODY = 11f;
+    /** The smallest print. */
+    public static final float NOTE = 10f;
+    /** Grey caps labels and the tags at the end of a row. */
+    public static final float LABEL = 9f;
+    /** What the user types: V1's 13 sp inside a 96 px box. */
+    public static final float INPUT = 13f;
+    /** Back pill and every other button. */
+    public static final float PILL = 10f;
+    /** A tile's name and its one-line detail. */
+    public static final float TILE_TITLE = 12f;
+    public static final float TILE_SUB = 10f;
+
     private Ui() {
     }
 
@@ -83,7 +110,7 @@ public final class Ui {
 
     /** The grey caps V1 puts above a section: "WHAT IT MAY USE", "USB - OTG". */
     public static TextView label(Context context, String value) {
-        TextView view = caps(context, value, 12f, MUTED);
+        TextView view = caps(context, value, LABEL, MUTED);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         params.topMargin = dp(context, 2);
@@ -91,13 +118,27 @@ public final class Ui {
         return view;
     }
 
-    /** The screen title: V1's 30sp amber caps, sitting under the back pill. */
+    /**
+     * A form label. V1's forms are sentence case - "Name", "Body weight, kg" -
+     * where its tile screens use caps, so this is the one label that is not run
+     * through {@link #caps}.
+     */
+    public static TextView sentenceLabel(Context context, String value) {
+        TextView view = text(context, value, LABEL, MUTED);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.topMargin = dp(context, 2);
+        view.setLayoutParams(params);
+        return view;
+    }
+
+    /** The screen title: V1's amber caps, sitting under the back pill. */
     public static TextView title(Context context, String value, float sizeSp) {
         TextView view = caps(context, value, sizeSp, AMBER);
         view.setLetterSpacing(0.10f);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        params.topMargin = dp(context, 8);
+        params.topMargin = dp(context, 6);
         view.setLayoutParams(params);
         return view;
     }
@@ -107,18 +148,18 @@ public final class Ui {
                                                  View.OnClickListener listener) {
         android.widget.Button pill = pill(context, "\u2039  " + label, colour, 0, BORDER, 255,
                 listener);
-        pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+        pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, PILL);
         return pill;
     }
 
     public static TextView body(Context context, String value) {
-        TextView view = text(context, value, 15f, TEXT);
+        TextView view = text(context, value, BODY, TEXT);
         view.setLineSpacing(dp(context, 4), 1f);
         return view;
     }
 
     public static TextView note(Context context, String value) {
-        TextView view = text(context, value, 14f, MUTED);
+        TextView view = text(context, value, NOTE, MUTED);
         view.setLineSpacing(dp(context, 4), 1f);
         return view;
     }
@@ -133,7 +174,7 @@ public final class Ui {
         view.setBackground(line);
         LinearLayout.LayoutParams params =
                 new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-                        dp(context, 2));
+                        dp(context, 1));
         params.topMargin = dp(context, 12);
         view.setLayoutParams(params);
         return view;
@@ -201,7 +242,7 @@ public final class Ui {
         android.widget.Button button = new android.widget.Button(context);
         button.setText(label.toUpperCase());
         button.setAllCaps(false);
-        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, PILL);
         button.setLetterSpacing(0.10f);
         button.setTypeface(button.getTypeface(), android.graphics.Typeface.BOLD);
         button.setTextColor(textColour);
@@ -236,13 +277,13 @@ public final class Ui {
         EditText edit = new EditText(context);
         edit.setHint(hint);
         edit.setText(value);
-        edit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f);
+        edit.setTextSize(TypedValue.COMPLEX_UNIT_SP, INPUT);
         edit.setTextColor(TEXT);
         edit.setHintTextColor(DIM);
         edit.setInputType(inputType);
         edit.setBackground(roundRect(FIELD, BORDER, 12, context));
-        edit.setPadding(dp(context, 16), dp(context, 12), dp(context, 16), dp(context, 12));
-        edit.setLayoutParams(spaced(context, 6));
+        edit.setPadding(dp(context, 16), dp(context, 10), dp(context, 16), dp(context, 10));
+        edit.setLayoutParams(spaced(context, 4));
         return edit;
     }
 
@@ -253,10 +294,10 @@ public final class Ui {
     public static LinearLayout section(Context context, String label, String title, String detail) {
         LinearLayout card = card(context);
         if (label != null && label.length() > 0) {
-            card.addView(caps(context, label, 12f, MUTED));
+            card.addView(caps(context, label, LABEL, MUTED));
         }
         if (title != null && title.length() > 0) {
-            TextView head = text(context, title, 17f, TEXT);
+            TextView head = text(context, title, HEAD, TEXT);
             head.setPadding(0, dp(context, 2), 0, 0);
             card.addView(head);
         }
@@ -273,12 +314,12 @@ public final class Ui {
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(0, dp(context, 14), 0, dp(context, 14));
-        TextView name = text(context, left, 15f, TEXT);
+        TextView name = text(context, left, BODY, TEXT);
         name.setLayoutParams(new LinearLayout.LayoutParams(0,
                 LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         row.addView(name);
         if (right != null && right.length() > 0) {
-            row.addView(caps(context, right, 12f, AMBER));
+            row.addView(caps(context, right, LABEL, AMBER));
         }
         if (listener != null) {
             row.setOnClickListener(listener);
@@ -302,7 +343,7 @@ public final class Ui {
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(0, dp(context, 14), 0, dp(context, 14));
-        TextView index = caps(context, number, 13f, MUTED);
+        TextView index = caps(context, number, NOTE, MUTED);
         index.setLayoutParams(new LinearLayout.LayoutParams(dp(context, 34),
                 LinearLayout.LayoutParams.WRAP_CONTENT));
         row.addView(index);
@@ -310,12 +351,12 @@ public final class Ui {
         words.setOrientation(LinearLayout.VERTICAL);
         words.setLayoutParams(new LinearLayout.LayoutParams(0,
                 LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-        words.addView(text(context, name, 15f, TEXT));
+        words.addView(text(context, name, BODY, TEXT));
         if (detail != null && detail.length() > 0) {
-            words.addView(text(context, detail, 13f, MUTED));
+            words.addView(text(context, detail, NOTE, MUTED));
         }
         row.addView(words);
-        row.addView(caps(context, "\u203a", 15f, AMBER));
+        row.addView(caps(context, "\u203a", BODY, AMBER));
         row.setOnClickListener(listener);
         return row;
     }
@@ -324,11 +365,11 @@ public final class Ui {
     public static LinearLayout fieldBlock(Context context, String label, EditText edit) {
         LinearLayout block = new LinearLayout(context);
         block.setOrientation(LinearLayout.VERTICAL);
-        block.addView(label(context, label));
+        block.addView(sentenceLabel(context, label));
         block.addView(edit);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        params.topMargin = dp(context, 10);
+        params.topMargin = dp(context, 8);
         block.setLayoutParams(params);
         return block;
     }
@@ -336,7 +377,7 @@ public final class Ui {
     /** A tap-to-toggle chip, the shape V1 uses for its condition buttons. */
     public static android.widget.TextView chip(Context context, String label, boolean on,
                                                View.OnClickListener listener) {
-        android.widget.TextView view = text(context, label, 15f, on ? BG : TEXT);
+        android.widget.TextView view = text(context, label, BODY, on ? BG : TEXT);
         view.setGravity(Gravity.CENTER);
         view.setBackground(roundRect(on ? AMBER : CHIP, on ? AMBER : BORDER, 24, context));
         view.setPadding(dp(context, 12), dp(context, 14), dp(context, 12), dp(context, 14));
@@ -556,7 +597,7 @@ public final class Ui {
     }
 
     public static TextView stat(Context context, String key, String value) {
-        TextView view = text(context, key.toUpperCase() + "   " + value, 13f, TEXT);
+        TextView view = text(context, key.toUpperCase() + "   " + value, NOTE, TEXT);
         view.setGravity(Gravity.START);
         view.setPadding(0, dp(context, 4), 0, dp(context, 4));
         return view;
