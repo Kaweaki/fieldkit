@@ -20,6 +20,8 @@ public final class Perms {
 
     public static final int REQ_RADIO = 4101;
 
+    /** The Library asks for READ_EXTERNAL_STORAGE on Android 10 and older. */
+
     private Perms() {
     }
 

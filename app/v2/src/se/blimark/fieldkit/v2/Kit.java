@@ -3,6 +3,10 @@ package se.blimark.fieldkit.v2;
 import android.app.Activity;
 import android.app.WallpaperManager;
 
+import android.provider.MediaStore;
+import android.content.ContentUris;
+import android.content.ActivityNotFoundException;
+import se.blimark.fieldkit.Library;
 import se.blimark.fieldkit.Survey;
 import se.blimark.fieldkit.UsbReport;
 import android.bluetooth.BluetoothAdapter;
@@ -34,6 +38,7 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -509,7 +514,10 @@ public final class Kit {
 
     private static final String ZIM_DIR = "/storage/emulated/0/Kiwix";
 
-    public static final int REQ_TREE = 5004;
+    // 5004 was already the APK picker's code, and a folder answer arriving as an
+    // APK answer made the app copy a tree URI into storage and crash. The folder
+    // picker gets a code of its own.
+    public static final int REQ_TREE = 5010;
     private static final String PREF_TREE = "zimtree";
 
     /** Lets the user hand the app one folder, which is the only way in under
@@ -522,46 +530,141 @@ public final class Kit {
         activity.startActivityForResult(intent, REQ_TREE);
     }
 
-    public static View library(final Activity activity, final Runnable back) {
-        LinearLayout column = Tools.screen(activity, "LIBRARY",
-                "the books on this phone, counted rather than promised", back);
+    /** Where a scan remembers what it has seen, so a deleted file can be named. */
+    static final String KEY_LIBRARY = "library_seen";
 
-        List<String> lines = fromKiwixLibrary(activity);
-        String tree = Store.get(activity, PREF_TREE, "");
-        if (lines.isEmpty() && tree.length() > 0) {
-            lines = listTree(activity, Uri.parse(tree));
-        } else if (lines.isEmpty()) {
-            File[] files = new File(ZIM_DIR).listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    if (file.getName().toLowerCase(Locale.US).endsWith(".zim")) {
-                        String detail = String.format(Locale.US, "%.0f MB",
-                                file.length() / 1048576.0);
-                        int articles = articles(file);
-                        if (articles > 0) {
-                            detail += "  " + articles + " articles";
-                        }
-                        lines.add(file.getName() + "|" + detail);
+    /** What the last open said: a gone file, a format with no app, or nothing. */
+    private static String libraryStatus = "";
+
+    /**
+     * LIBRARY: every document in the folders the user handed over, newest first.
+     *
+     * Access is asked for in the one way Android allows everywhere: the system
+     * picker grants one folder tree, the app keeps that grant, and the scan walks
+     * it. Where READ_EXTERNAL_STORAGE is available the media index is read as
+     * well, and the card says which of the two filled the list - a scan that
+     * found nothing and a scan that was not allowed are never the same sentence.
+     */
+    public static View library(final Activity activity, final Runnable back) {
+        final LinearLayout column = Tools.screen(activity, "LIBRARY",
+                "the documents on this phone, read where they lie", back);
+
+        final List<Uri> trees = treeUris(activity);
+        final boolean media = canReadStorage(activity);
+        final List<Library.Entry> files = trees.isEmpty()
+                ? (media ? scanMediaStore(activity) : new ArrayList<Library.Entry>())
+                : scanTrees(activity, trees);
+
+        String seen = Store.get(activity, KEY_LIBRARY, "");
+        if (!trees.isEmpty() || media) {
+            seen = Library.remember(seen, files, System.currentTimeMillis());
+            Store.putNow(activity, KEY_LIBRARY, seen);
+        }
+        final List<Library.Entry> gone = !trees.isEmpty() || media
+                ? Library.gone(seen, files) : new ArrayList<Library.Entry>();
+        if (libraryStatus.length() > 0) {
+            column.addView(Ui.note(activity, libraryStatus));
+        }
+
+        LinearLayout access = Ui.section(activity, "storage access", accessTitle(activity, trees),
+                accessLine(activity, trees));
+        if (trees.isEmpty()) {
+            access.addView(Ui.note(activity, "Nothing is listed until a folder is handed over. "
+                    + "The picker opens once, the grant is kept, and no other folder is ever "
+                    + "looked at."));
+        }
+        access.addView(Ui.action(activity, trees.isEmpty() ? "CHOOSE THE DOWNLOAD FOLDER"
+                : "ADD ANOTHER FOLDER", Ui.AMBER, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                libraryStatus = "";
+                pickFolder(activity);
+            }
+        }));
+        // No all-files button: the folder grant is the whole design, and the app
+        // never asks for access to the entire card.
+        column.addView(access);
+
+        // With nothing granted there was no scan at all, so the card must not say
+        // one happened and found nothing: those are different sentences.
+        boolean allowed = !trees.isEmpty() || media;
+        LinearLayout scan = Ui.section(activity, "scan",
+                !allowed ? "Nothing granted to scan"
+                        : files.isEmpty() ? "No documents found"
+                        : files.size() + (files.size() == 1 ? " document on this phone"
+                        : " documents on this phone"),
+                !allowed ? "No folder and no storage permission, so nothing was read."
+                        : "Newest first. Scanned "
+                        + Library.stamp(System.currentTimeMillis()) + ".");
+        scan.addView(Ui.action(activity, "SCAN AGAIN", Ui.GREEN, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                libraryStatus = "";
+                V2Activity.showLibrary(activity);
+            }
+        }));
+        scan.addView(Ui.note(activity, "The folder grant lists what Android's media index "
+                + "holds for it, so a file removed with a cable or another computer can stay "
+                + "listed until that index catches up. Opening it then says it is gone."));
+        if (files.isEmpty()) {
+            scan.addView(Ui.note(activity, trees.isEmpty() && !media
+                    ? "Choose a folder first; the scan reads only what you hand it."
+                    : "The folders are empty, or hold only pictures and video, which this "
+                    + "screen leaves out. Put a PDF or a note in there and scan again."));
+        }
+        column.addView(scan);
+
+        if (!files.isEmpty()) {
+            LinearLayout documents = Ui.section(activity, "documents",
+                    "Tap one to open it", "Opens in whichever app handles the format.");
+            for (final Library.Entry entry : files) {
+                LinearLayout row = Ui.section(activity,
+                        entry.kind() + "  " + Library.size(entry.size), entry.name,
+                        Library.stamp(entry.modified));
+                row.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        openEntry(activity, entry);
                     }
+                });
+                Ui.pressable(row);
+                documents.addView(row);
+            }
+            column.addView(documents);
+        }
+
+        if (!gone.isEmpty()) {
+            LinearLayout missing = Ui.section(activity, "no longer available",
+                    gone.size() + (gone.size() == 1 ? " file the last scan saw"
+                            : " files the last scan saw"),
+                    "Deleted or moved since. A scan cannot open what is not there.");
+            int shown = 0;
+            for (Library.Entry entry : gone) {
+                missing.addView(Ui.row(activity, entry.name,
+                        Library.size(entry.size) + "  last seen " + Library.stamp(entry.modified),
+                        null));
+                if (++shown >= 8) {
+                    break;
                 }
             }
+            missing.addView(Ui.button(activity, "FORGET THE MISSING ONES", Ui.AMBER,
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            Store.putNow(activity, KEY_LIBRARY, Library.remember("", files,
+                                    System.currentTimeMillis()));
+                            libraryStatus = "";
+                            V2Activity.showLibrary(activity);
+                        }
+                    }));
+            column.addView(missing);
         }
 
         final String kiwix = installed(activity, KIWIX);
         LinearLayout reader = Ui.section(activity, "kiwix",
                 kiwix == null ? "Kiwix is not installed" : "Kiwix is installed",
-                "Kiwix reads ZIM files. This screen only finds them and counts them.");
-        reader.addView(Ui.action(activity, lines.isEmpty() ? "CHOOSE THE KIWIX FOLDER"
-                : "CHOOSE A DIFFERENT FOLDER", Ui.AMBER, new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                pickFolder(activity);
-            }
-        }));
-        if (kiwix == null) {
-            reader.addView(Ui.note(activity, "Nothing here can be read until Kiwix is "
-                    + "installed."));
-        } else {
+                "Kiwix reads ZIM archives; this screen only finds them.");
+        if (kiwix != null) {
             reader.addView(Ui.action(activity, "OPEN KIWIX", Ui.GREEN, new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -574,41 +677,274 @@ public final class Kit {
         }
         column.addView(reader);
 
-        LinearLayout shelf = Ui.section(activity, "starter shelf",
-                "Ten useful first pages", "not in this build");
-        shelf.addView(Ui.note(activity, "V1 listed ten starter pages and starred ten starter "
-                + "searches. This build cannot deep-link into Kiwix, so it cannot open a page "
-                + "by name: search inside Kiwix instead."));
-        column.addView(shelf);
+        column.addView(Ui.note(activity, "Sizes and dates are the files' own. A file that "
+                + "disappears is named under \"no longer available\", never silently dropped. "
+                + "The folder grant lists what Android's media index holds for it, so a file "
+                + "removed with a cable or another computer can stay in the list until that "
+                + "index catches up - opening it then says it is gone."));
+        return column;
+    }
 
-        LinearLayout books = Ui.section(activity, "on this phone",
-                lines.isEmpty() ? "No books found yet"
-                        : lines.size() + (lines.size() == 1 ? " book in this folder"
-                        : " books in this folder"),
-                lines.isEmpty() ? "Point the app at the folder once; it keeps the permission."
-                        : "Sizes and article counts are read from each file.");
-        if (lines.isEmpty()) {
-            books.addView(Ui.note(activity, "This Android version will not let an app read "
-                    + ZIM_DIR + " by itself, so no folder means no list."));
-        } else {
-            for (String entry : lines) {
-                String[] parts = entry.split("\\|");
-                books.addView(Ui.row(activity, parts[0].replace(".zim", ""),
-                        parts.length > 1 ? parts[1] : "", null));
+    static final String KEY_TREES = "libtrees";
+
+    /** Every folder the user has handed over, in the order they picked them. */
+    static List<String> storedTrees(Context context) {
+        List<String> out = new ArrayList<String>();
+        for (String line : Store.get(context, KEY_TREES, "").split("\n")) {
+            if (line.trim().length() > 0) {
+                out.add(line.trim());
             }
         }
-        column.addView(books);
+        return out;
+    }
 
-        LinearLayout favourites = Ui.section(activity, "favourites",
-                "Add a favourite", "not in this build");
-        favourites.addView(Ui.note(activity, "No saved articles in this build: there is no "
-                + "list to star into, and nothing that could open a page by name."));
-        column.addView(favourites);
+    /** Keeps the grant for a new folder; picking the same one twice adds nothing. */
+    static void addTree(Context context, Uri uri) {
+        List<String> list = storedTrees(context);
+        if (!list.contains(uri.toString())) {
+            list.add(uri.toString());
+            StringBuilder blob = new StringBuilder();
+            for (String value : list) {
+                if (blob.length() > 0) {
+                    blob.append('\n');
+                }
+                blob.append(value);
+            }
+            Store.putNow(context, KEY_TREES, blob.toString());
+        }
+    }
 
-        column.addView(Ui.note(activity, "Article counts come from each file's own 80-byte "
-                + "header, so a truncated download shows up as a number that cannot be right "
-                + "for its size."));
-        return column;
+    static List<Uri> treeUris(Context context) {
+        List<Uri> out = new ArrayList<Uri>();
+        for (String stored : storedTrees(context)) {
+            Uri uri = Uri.parse(stored);
+            try {
+                context.getContentResolver().takePersistableUriPermission(uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                out.add(uri);
+            } catch (RuntimeException error) {
+                // The grant is gone (the folder was removed, the app was reinstalled):
+                // the screen simply does not count it, and asks for a folder again.
+            }
+        }
+        return out;
+    }
+
+    /** The union of every granted folder, one entry per document. */
+    static List<Library.Entry> scanTrees(Activity activity, List<Uri> trees) {
+        List<Library.Entry> all = new ArrayList<Library.Entry>();
+        Set<String> seen = new HashSet<String>();
+        for (Uri tree : trees) {
+            for (Library.Entry entry : scanTree(activity, tree)) {
+                String key = entry.uri.length() > 0 ? entry.uri : entry.path;
+                if (seen.add(key)) {
+                    all.add(entry);
+                }
+            }
+        }
+        return Library.newestFirst(all);
+    }
+
+    static String accessTitle(Activity activity, List<Uri> trees) {
+        if (!trees.isEmpty()) {
+            return "Granted - " + trees.size() + (trees.size() == 1 ? " folder" : " folders")
+                    + ", chosen in the system picker";
+        }
+        return canReadStorage(activity) ? "Partial - Android's media index only"
+                : "Not granted - the scan sees nothing";
+    }
+
+    static String accessLine(Activity activity, List<Uri> trees) {
+        if (!trees.isEmpty()) {
+            StringBuilder names = new StringBuilder();
+            for (Uri tree : trees) {
+                String segment = tree.getLastPathSegment();
+                if (names.length() > 0) {
+                    names.append(", ");
+                }
+                names.append(segment == null ? "a folder"
+                        : segment.replace("primary:", "/").replace(":", "/"));
+            }
+            return "Access: " + names + " - read through the grant Android gave when you "
+                    + "picked it.";
+        }
+        if (canReadStorage(activity)) {
+            return "READ_EXTERNAL_STORAGE is on, so the media index is read. On this Android "
+                    + "version that index carries pictures and video but not PDFs or notes, "
+                    + "which is why the folder picker is the one that matters.";
+        }
+        return "No storage access and no folder chosen, so the media index returns nothing.";
+    }
+
+    /**
+     * True when this build may read shared storage through the media index.
+     *
+     * Above Android 9 the answer is always no, because the permission is capped at
+     * API 28 in the manifest and scoped storage would make it useless anyway. The
+     * folder grant is the path that works there, and the screen says so instead of
+     * offering a permission that would change nothing.
+     */
+    static boolean canReadStorage(Context context) {
+        if (Build.VERSION.SDK_INT > 28) {
+            return false;
+        }
+        return context.checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED;
+    }
+
+    /**
+     * The scan of a granted tree, through DocumentsContract. It is the same walk
+     * whatever the Android version, because the provider does the reading and the
+     * app only ever holds document URIs.
+     */
+    static List<Library.Entry> scanTree(Context context, Uri tree) {
+        List<Library.Entry> out = new ArrayList<Library.Entry>();
+        try {
+            String root = DocumentsContract.getTreeDocumentId(tree);
+            walk(context, tree, root, out, 0);
+        } catch (RuntimeException error) {
+            libraryStatus = "That folder can no longer be read: " + error.getMessage();
+        }
+        return Library.newestFirst(out);
+    }
+
+    private static void walk(Context context, Uri tree, String documentId,
+                             List<Library.Entry> out, int depth) {
+        if (depth > Library.MAX_DEPTH || out.size() >= Library.MAX_FILES) {
+            return;
+        }
+        Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, documentId);
+        Cursor cursor = null;
+        try {
+            cursor = context.getContentResolver().query(children, new String[]{
+                    DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    DocumentsContract.Document.COLUMN_MIME_TYPE,
+                    DocumentsContract.Document.COLUMN_SIZE,
+                    DocumentsContract.Document.COLUMN_LAST_MODIFIED}, null, null, null);
+            if (cursor == null) {
+                return;
+            }
+            while (cursor.moveToNext() && out.size() < Library.MAX_FILES) {
+                String id = cursor.getString(0);
+                String name = cursor.getString(1);
+                String mime = cursor.getString(2);
+                if (name == null || id == null) {
+                    continue;
+                }
+                if (DocumentsContract.Document.MIME_TYPE_DIR.equals(mime)) {
+                    walk(context, tree, id, out, depth + 1);
+                    continue;
+                }
+                if (!Library.isMaterial(name)) {
+                    continue;
+                }
+                out.add(new Library.Entry(id, name, cursor.getLong(3), cursor.getLong(4),
+                        DocumentsContract.buildDocumentUriUsingTree(tree, id).toString()));
+            }
+        } catch (RuntimeException error) {
+            libraryStatus = "Part of that folder could not be read.";
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+    }
+
+    private static List<Library.Entry> scanMediaStore(Context context) {
+        List<Library.Entry> out = new ArrayList<Library.Entry>();
+        Uri uri = MediaStore.Files.getContentUri("external");
+        Cursor cursor = null;
+        try {
+            // DATA is redacted for an app on scoped storage, so the folder comes
+            // from RELATIVE_PATH and the path is rebuilt for display only.
+            cursor = context.getContentResolver().query(uri, new String[]{
+                    MediaStore.Files.FileColumns._ID,
+                    MediaStore.Files.FileColumns.DISPLAY_NAME,
+                    MediaStore.Files.FileColumns.SIZE,
+                    MediaStore.Files.FileColumns.DATE_MODIFIED,
+                    MediaStore.MediaColumns.RELATIVE_PATH,
+                    MediaStore.Files.FileColumns.MIME_TYPE}, null, null,
+                    MediaStore.Files.FileColumns.DATE_MODIFIED + " DESC");
+            if (cursor == null) {
+                return out;
+            }
+            while (cursor.moveToNext() && out.size() < Library.MAX_FILES) {
+                String name = cursor.getString(1);
+                String relative = cursor.getString(4);
+                String mime = cursor.getString(5);
+                if (name == null || relative == null || !underLibrary(relative)
+                        || !Library.isMaterial(name)
+                        || "vnd.android.document/directory".equals(mime)) {
+                    continue;
+                }
+                long id = cursor.getLong(0);
+                out.add(new Library.Entry("/storage/emulated/0/" + relative + name, name,
+                        cursor.getLong(2), cursor.getLong(3) * 1000L,
+                        ContentUris.withAppendedId(uri, id).toString()));
+            }
+        } catch (RuntimeException error) {
+            // An index the app may not read is the same as no index: report nothing.
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+        return Library.newestFirst(out);
+    }
+
+    private static boolean underLibrary(String relative) {
+        for (String folder : Library.FOLDERS) {
+            if (relative.startsWith(folder + "/")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Opens one file, and says why when it cannot. */
+    static void openEntry(final Activity activity, final Library.Entry entry) {
+        if (!stillThere(activity, entry)) {
+            libraryStatus = entry.name + " is no longer on this phone. The scan below "
+                    + "remembers it as gone.";
+            V2Activity.showLibrary(activity);
+            return;
+        }
+        Uri uri = entry.uri.length() > 0 ? Uri.parse(entry.uri) : LibraryFiles.uriFor(entry.path);
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setDataAndType(uri, entry.mime());
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        if (intent.resolveActivity(activity.getPackageManager()) == null) {
+            libraryStatus = "No app on this phone opens " + entry.kind() + " files. "
+                    + entry.name + " is still here, nothing was lost.";
+            V2Activity.showLibrary(activity);
+            return;
+        }
+        try {
+            activity.startActivity(intent);
+            libraryStatus = "Opening " + entry.name + ".";
+        } catch (android.content.ActivityNotFoundException error) {
+            libraryStatus = "No app on this phone opens " + entry.kind() + " files.";
+            V2Activity.showLibrary(activity);
+        }
+    }
+
+    /** A file can be listed and still be gone; ask the reader, not the path. */
+    private static boolean stillThere(Context context, Library.Entry entry) {
+        if (entry.uri.length() > 0) {
+            try {
+                android.content.res.AssetFileDescriptor descriptor = context.getContentResolver()
+                        .openAssetFileDescriptor(Uri.parse(entry.uri), "r");
+                if (descriptor == null) {
+                    return false;
+                }
+                descriptor.close();
+                return true;
+            } catch (Exception error) {
+                return false;
+            }
+        }
+        return new File(entry.path).isFile();
     }
 
     private static List<String> listTree(Activity activity, Uri treeUri) {

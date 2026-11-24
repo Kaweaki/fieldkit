@@ -13,6 +13,7 @@ import android.widget.TextView;
 
 import java.util.Map;
 
+import se.blimark.fieldkit.Compass;
 import se.blimark.fieldkit.Heading;
 import se.blimark.fieldkit.Ice;
 import se.blimark.fieldkit.Perms;
@@ -78,6 +79,57 @@ public final class Tools {
      * values feed the water and ORS sums and the ICE card, exactly as in the
      * shipped build, so this screen is a form and not a calculator.
      */
+    // ---- compass ----------------------------------------------------------
+
+    /**
+     * A magnetic compass: the rose, the whole degree and what the sensor says
+     * about its own accuracy. The sensor is registered by the view when it is
+     * attached, so nothing is read while another screen is in front.
+     */
+    public static View compass(final Activity activity, final Runnable back) {
+        LinearLayout column = Tools.screen(activity, "COMPASS",
+                "magnetic north, read from this phone", back);
+
+        final CompassView rose = new CompassView(activity);
+        final TextView readout = Ui.title(activity, "no reading", Ui.TITLE_HOME);
+        final TextView accuracy = Ui.note(activity, Compass.accuracy(-1));
+
+        LinearLayout dial = Ui.section(activity, "heading",
+                rose.hasSensor() ? "Hold the phone flat, face up" : "No compass in this phone",
+                "Magnetic north. True north differs by the local declination, which needs a fix.");
+        dial.addView(readout);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(activity, 280));
+        params.topMargin = Ui.dp(activity, 10);
+        dial.addView(rose, params);
+        dial.addView(accuracy);
+        if (!rose.hasSensor()) {
+            dial.addView(Ui.note(activity, "This phone reports no rotation vector sensor, so "
+                    + "there is nothing to read. The screen says so instead of drawing a "
+                    + "needle that would be guessing."));
+        }
+        column.addView(dial);
+
+        rose.setHeadingListener(new CompassView.Heading() {
+            @Override
+            public void onHeading(float degrees, int status, boolean present) {
+                String shown = Compass.line(degrees);
+                String note = Compass.accuracy(status);
+                if (!shown.contentEquals(readout.getText())) {
+                    readout.setText(shown);
+                }
+                if (!note.contentEquals(accuracy.getText())) {
+                    accuracy.setText(note);
+                }
+            }
+        });
+
+        column.addView(Ui.note(activity, "The sensor runs only while this screen is open. "
+                + "Metal, a magnet or a thick case bends the reading; turning the phone in a "
+                + "figure eight calibrates it again."));
+        return column;
+    }
+
     public static View profile(final Activity activity, final Runnable back) {
         LinearLayout column = screen(activity, "PROFILE",
                 "who is here - the calculators use every person", back);

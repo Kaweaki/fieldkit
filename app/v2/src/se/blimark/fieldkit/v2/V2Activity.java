@@ -68,6 +68,18 @@ public final class V2Activity extends Activity {
         });
     }
 
+    /** Opens the library, and re-scans it in place when the screen asks to. */
+    static void showLibrary(final Activity activity) {
+        final V2Activity self = (V2Activity) activity;
+        self.openTile = "LIBRARY";
+        self.openOnWorker(new ViewBuilder() {
+            @Override
+            public View build() {
+                return Kit.library(self, self.home());
+            }
+        });
+    }
+
     /** Opens the survey, and rebuilds it in place after a save, an edit or a delete. */
     static void showSurvey(final Activity activity) {
         final V2Activity self = (V2Activity) activity;
@@ -418,6 +430,7 @@ public final class V2Activity extends Activity {
                 {"Journal", "sealed notes", "pen", "TAN"},
                 {"Maps", "own map files", "map", "SKY"},
                 {"Comms", "Briar, beacons", "talk", "PURPLE"},
+                {"Compass", "magnetic north", "compass", "AMBER"},
                 {"Help", "what works", "question", "IVORY"}
         };
 
@@ -554,6 +567,8 @@ public final class V2Activity extends Activity {
             return Kit.screens(this, home);
         } else if ("Library".equals(tile)) {
             return Kit.library(this, home);
+        } else if ("Compass".equals(tile)) {
+            return Tools.compass(this, home);
         } else if ("Journal".equals(tile)) {
             return Kit.journal(this, home);
         } else if ("Maps".equals(tile)) {
@@ -605,6 +620,8 @@ public final class V2Activity extends Activity {
             kind = Ui.ICON_TALK;
         } else if ("question".equals(name)) {
             kind = Ui.ICON_QUESTION;
+        } else if ("compass".equals(name)) {
+            kind = Ui.ICON_COMPASS;
         }
         return Ui.icon(this, kind, Ui.DIM);
     }
@@ -827,13 +844,8 @@ public final class V2Activity extends Activity {
             } catch (SecurityException ignored) {
                 // Some providers keep the grant without persisting it.
             }
-            Store.put(this, "zimtree", uri.toString());
-            open(Kit.library(this, new Runnable() {
-                @Override
-                public void run() {
-                    goHome();
-                }
-            }));
+            Kit.addTree(this, uri);
+            showLibrary(this);
             return;
         }
         if (request == REQ_MBTILES) {

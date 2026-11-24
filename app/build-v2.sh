@@ -47,8 +47,11 @@ mkdir -p build/v2/classes build/v2/dex build/v2/pkg
 javac --release 8 -Xlint:-options -classpath "$ANDROID_JAR" -d build/v2/classes \
     $(find src v2/src -name '*.java')
 
+# The class list outgrows a Windows command line once the app has a few dozen
+# classes, so d8 reads its inputs from a file instead of an argument list.
+find build/v2/classes -name '*.class' | sed 's|^|./|' > build/v2/classes.list
 "$D8" --lib "$ANDROID_JAR" --min-api "$MIN_SDK" --output build/v2/dex \
-    $(find build/v2/classes -name '*.class')
+    @build/v2/classes.list
 
 # classes.dex enters the APK after aapt2 link and before zipalign. It has to go
 # into a copy of what aapt2 produced: building a fresh archive here would drop

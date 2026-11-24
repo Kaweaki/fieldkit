@@ -591,6 +591,7 @@ public final class Ui {
     public static final int ICON_MAP = 9;
     public static final int ICON_TALK = 10;
     public static final int ICON_QUESTION = 11;
+    public static final int ICON_COMPASS = 12;
 
     private static final class IconView extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -682,6 +683,15 @@ public final class Ui {
                             paint);
                     canvas.drawLine(cx - r * 0.55f, cy + r * 0.6f, cx - r * 0.2f, cy + r * 0.55f,
                             paint);
+                    break;
+                case ICON_COMPASS:
+                    canvas.drawCircle(cx, cy, r * 0.8f, paint);
+                    path.moveTo(cx, cy - r * 0.5f);
+                    path.lineTo(cx + r * 0.28f, cy + r * 0.5f);
+                    path.lineTo(cx, cy + r * 0.2f);
+                    path.lineTo(cx - r * 0.28f, cy + r * 0.5f);
+                    path.close();
+                    canvas.drawPath(path, paint);
                     break;
                 case ICON_MAP:
                     path.moveTo(cx - r * 0.75f, cy - r * 0.5f);

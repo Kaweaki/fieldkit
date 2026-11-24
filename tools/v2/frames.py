@@ -37,7 +37,17 @@ def gfx():
     return " | ".join(keep)
 
 
+def to_top():
+    """The home grid is taller than the phone, and a tile above the fold is not
+    reachable by scrolling down. Every tile search starts from the top."""
+    for _ in range(4):
+        shell("input", "swipe", "540", "900", "540", "1900", "150")
+        time.sleep(0.25)
+
+
 def center(text, prefix=False):
+    if text in emu.TILES:
+        to_top()
     for value, _, x1, y1, x2, y2 in emu.dump():
         # A ScrollView reports its off-screen children with 0x0 bounds; tapping one
         # lands in the corner, so only laid-out nodes count.
@@ -83,6 +93,12 @@ for _ in range(3):
 shell("am", "force-stop", PKG)
 shell("logcat", "-c")
 shell("am", "start", "-n", PKG + "/" + PKG + ".V2Activity")
+# The app can come back on the tile it was showing, so walk to the grid first.
+for _ in range(4):
+    time.sleep(1.2)
+    if any("tap a tile" in text for text in emu.texts()):
+        break
+    shell("input", "keyevent", "4")
 time.sleep(2.5)
 
 step("home -> Settings (tile)", tap("Settings"))
@@ -150,7 +166,17 @@ step("SURVEY -> SURVEY (SAVE THE SURVEY)", tap_at("SAVE THE SURVEY"))
 step("SURVEY -> SURVEY (OPEN a saved survey)", tap_at("OPEN"))
 step("SURVEY -> SURVEY (DELETE asks first)", tap_at("DELETE"))
 step("SURVEY -> SURVEY (KEEP IT)", tap_at("KEEP IT"))
-step("SURVEY -> Link (back pill)", tap_at("\u2039", prefix=True))
+step("SURVEY -> home (back pill)", tap_at("\u2039", prefix=True))
+
+# LIBRARY is the same async-attach screen, so it is held to the same cadence.
+step("home -> Library (tile)", tap("Library"))
+step("Library -> Library (SCAN AGAIN)", tap_at("SCAN AGAIN"))
+step("Library -> home (back pill)", tap_at("\u2039", prefix=True))
+
+# COMPASS reads the rotation sensor and redraws only when the needle moves, so a
+# still phone costs nothing and a turning one stays at the same cadence.
+step("home -> Compass (tile)", tap_at("Compass"))
+step("Compass -> home (back pill)", tap_at("\u2039", prefix=True))
 
 print("focus:", emu.focus())
 print("crash hits:", shell("logcat", "-b", "crash", "-d").count("fieldkit.v2"))

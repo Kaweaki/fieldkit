@@ -674,3 +674,86 @@ queues the write, the process dies, and the last word is gone.
 preferences, so it goes when the app is uninstalled, and it is not encrypted the
 way the journal is. Export and a photo or GPS stamp per entry are the next
 honest steps, not done here.
+
+## LIBRARY reads the phone's own storage (this round)
+
+V1 indexed a shelf of Kiwix searches. V2's LIBRARY now lists the documents that
+are actually on the phone and opens them.
+
+**How it reaches the files.** On Android 10 with targetSdk 36 the media index no
+longer answers with paths: MediaStore's `DATA` is masked and it does not index
+PDFs or notes in Download at all. The app therefore asks for the folder once,
+through `ACTION_OPEN_DOCUMENT_TREE`, keeps the grant URI, and walks it with
+`DocumentsContract`. Several folders can be granted (`libtrees`). There is no
+all-files permission: `MANAGE_EXTERNAL_STORAGE` is gone from the manifest and
+`READ_EXTERNAL_STORAGE` is capped at API 28, where it is only the fallback for a
+phone without the tree picker - above that it would grant nothing anyway. Raw
+paths for the fallback go through the app's own read-only `LibraryFiles`
+provider (`se.blimark.fieldkit.v2.files`), which is not exported.
+
+**What the screen says.** An access card (which folders, in the system picker's
+own words), a scan card (count, the time of the scan, `SCAN AGAIN` and the honest
+note that the grant lists what Android's media index holds for that folder), the
+documents newest first with format, size and date, a Kiwix card, and - when a
+file that was listed has gone - a `no longer available` section that names it and
+offers `FORGET THE MISSING ONES`. With nothing granted the scan card reads
+`Nothing granted to scan` and explicitly does not claim a scan found nothing; the
+count line is absent rather than a false zero.
+
+**Opening.** A PDF opened in Samsung Notes on this phone, a text file went to the
+system chooser, `alice.epub` had no handler at all and the app said so in one
+sentence (`No app on this phone opens EPUB`) and stayed in front instead of doing
+nothing. A row that has vanished since the scan says the file is no longer on the
+phone instead of failing to open.
+
+**Verified on the SM-A505F** (`tools/v2/library_flow.py`, plus targeted re-checks
+after two test-side bugs were found):
+
+- 66 documents listed from the granted Download tree, newest first, with format,
+  size and date; the pushed samples (`manual.pdf` 13 KB, `alice.epub` 4 MB,
+  `git-readme.txt`, `water-quality.csv`, a zero-byte CSV) all appeared, and the
+  zero-byte file printed `0 BYTES`.
+- PDF -> `com.samsung.android.app.notes`; text -> the system chooser; EPUB -> the
+  honest sentence, still in FieldKit.
+- A file removed behind the list dropped out of the count (66 -> 65) and was named
+  under `no longer available`; restoring it and indexing it brought it back, and
+  `FORGET THE MISSING ONES` emptied the section without touching the live list.
+- `pm clear` then reopening: `Not granted - the scan sees nothing`, the picker
+  offered, `Nothing granted to scan`, no count, no rows; granting again restored
+  the list.
+- 0 crash lines in logcat across the flow.
+
+**Measured** (`tools/v2/frames.py`): home -> LIBRARY builds in 407 ms on the
+worker and attaches in 44 ms; the transition is 15 frames, mean 18 ms, max 50 ms,
+**1 late of 14**. That one late frame is the blemish in this round: 66 rows are
+laid out at once. Every other transition measured here is 17 frames at 16 ms with
+nothing late.
+
+**Honest limits.** The Download grant is served by Android's media index on this
+version, so a file deleted with a cable or another computer can stay in the list
+until that index catches up - the screen says so, and opening it then reports that
+it is gone. EPUB has no reader on this phone. The media-index fallback only works
+on Android 9 and below. Landscape rotation of the library screen was not measured
+this round.
+
+## COMPASS, the thirteenth tile
+
+`CompassView` draws a rose (ring, 15-degree ticks, needle, N/S/E/W) and reads
+`TYPE_ROTATION_VECTOR`. The sensor is registered in `onAttachedToWindow` and
+unregistered in `onDetachedFromWindow`, so nothing is read while another screen is
+in front. The needle is smoothed (0.25 of the delta) and repaints only when the
+heading moves by 0.3 degrees; the readout is told only when the whole degree or
+the accuracy changes. That is what keeps the window idle enough for anything that
+reads the screen, and it is what makes a still phone cost nothing.
+
+`Compass` in `app/src` is the pure part: eight cardinal points with wrapping,
+whole degrees, the line the screen prints, and a sentence per
+`SENSOR_STATUS_*`. Eighteen self-test cases; the suite is now **205 passed, 0
+failed**.
+
+On the phone the screen read **224 degrees SW** with `Accuracy: high`, logged
+`FieldKitCompass: heading 224 accuracy 3`, and the tile opens and closes cleanly:
+**17 frames, mean 16 ms, max 16 ms, 0 late**, press 13 frames at 16 ms, build 50
+ms, attach 25 ms, 0 crash lines. The heading is magnetic north and the screen says
+so; true north needs a declination, which needs a fix. The phone lay still on a
+desk, so the reading was not compared against a known bearing.

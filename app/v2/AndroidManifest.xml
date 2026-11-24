@@ -16,8 +16,13 @@
     <!-- The lock-screen ICE card. -->
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
 
-    <!-- No INTERNET, no storage permissions: files come through the system picker,
-         and /Kiwix is read with the legacy flag below on Android 10 only. -->
+    <!-- No INTERNET ever, and no all-files access either. Library reads through the
+         folder the user hands over in the system picker (ACTION_OPEN_DOCUMENT_TREE),
+         which needs no permission at all. READ_EXTERNAL_STORAGE is capped at Android
+         9: it is only the fallback for a phone without the tree picker, and above
+         API 28 scoped storage means it would grant nothing anyway. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
 
     <!-- USB host is optional: the inspector reports what it finds, and the app
          still installs on a phone with no host port. No permission is needed to
@@ -36,6 +41,13 @@
         android:supportsRtl="true"
         android:theme="@style/FieldKitTheme"
         android:usesCleartextTraffic="false">
+
+        <!-- Serves one library file, read-only, to the app the user tapped. -->
+        <provider
+            android:name=".LibraryFiles"
+            android:authorities="se.blimark.fieldkit.v2.files"
+            android:exported="false"
+            android:grantUriPermissions="true" />
 
         <activity
             android:name=".V2Activity"

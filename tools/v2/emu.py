@@ -16,7 +16,7 @@ import subprocess
 PKG_V1 = "se.blimark.fieldkit"
 PKG_V2 = "se.blimark.fieldkit.v2"
 TILES = ["Profile", "Settings", "Medical", "Calculator", "Link", "Share",
-         "Screens", "Library", "Journal", "Maps", "Comms", "Help"]
+         "Screens", "Library", "Journal", "Maps", "Comms", "Compass", "Help"]
 
 
 def _find_adb():
@@ -41,10 +41,30 @@ def sh(*args):
     return subprocess.run([ADB, "-s", SERIAL] + list(args), capture_output=True).stdout
 
 
-def dump():
-    """The current screen as [(text, class, x1, y1, x2, y2)], from uiautomator."""
-    sh("shell", "uiautomator", "dump", "/data/local/tmp/t.xml")
-    xml = sh("exec-out", "cat", "/data/local/tmp/t.xml").decode("utf-8", "replace")
+def dump(retries=6):
+    """The current screen as [(text, class, x1, y1, x2, y2)], from uiautomator.
+
+    The old file is deleted first and the answer is checked for a screen: a dump
+    that fails ("could not get idle state" while a view animates) used to be read
+    as the previous screen, which made later checks pass on a stale picture.
+    """
+    xml = ""
+    problem = ""
+    attempt = 0
+    while attempt < retries:
+        attempt += 1
+        sh("shell", "rm", "-f", "/data/local/tmp/t.xml")
+        problem = sh("shell", "uiautomator", "dump", "/data/local/tmp/t.xml") \
+            .decode("utf-8", "replace").strip()
+        xml = sh("exec-out", "cat", "/data/local/tmp/t.xml").decode("utf-8", "replace")
+        if "text=" in xml:
+            break
+        import time
+        # uiautomator gives up when a window will not go idle; a screen that is
+        # mid-fade answers on the next try, so wait longer rather than fail.
+        time.sleep(1.5)
+    if "text=" not in xml:
+        raise RuntimeError("uiautomator could not read the screen: " + problem[:160])
     out = []
     for m in re.finditer(r'text="([^"]*)"[^>]*?class="([^"]*)"[^>]*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml):
         out.append((m.group(1).strip(), m.group(2).split(".")[-1],
@@ -111,8 +131,25 @@ def tree(path):
                              % (text.replace("\n", " / ")[:40], kind, x1, x2, y1, y2))
 
 
+def ensure_home():
+    """Back out of whatever tile screen the app restored until the grid is up.
+
+    The app keeps the open tile across a restart (the storage picker returns into
+    it), so a script that only force-starts the process can land on Library.
+    """
+    import time
+    for _ in range(4):
+        texts = [t for t, _, _, _, _, _ in dump() if t]
+        if any("tap a tile" in t for t in texts):
+            return True
+        sh("shell", "input", "keyevent", "4")
+        time.sleep(0.8)
+    return False
+
+
 def open_tile(label):
     """Scroll the home grid until the named tile is on screen, then tap it."""
+    ensure_home()
     sh("shell", "input", "swipe", "540", "700", "540", "1900", "120")
     import time
     time.sleep(0.6)

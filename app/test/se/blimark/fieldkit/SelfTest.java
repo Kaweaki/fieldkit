@@ -1,6 +1,8 @@
 package se.blimark.fieldkit;
 
+import java.io.File;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -31,10 +33,125 @@ public final class SelfTest {
         geo();
         usb();
         survey();
+        library();
+        compass();
 
         System.out.println();
         System.out.println(passed + " passed, " + failed + " failed");
         System.exit(failed == 0 ? 0 : 1);
+    }
+
+    // ---------------------------------------------------------------- compass
+
+    private static void compass() {
+        equal("zero is north", "N", Compass.cardinal(0f));
+        equal("ten degrees is still north", "N", Compass.cardinal(10f));
+        equal("forty-five is north-east", "NE", Compass.cardinal(45f));
+        equal("ninety is east", "E", Compass.cardinal(90f));
+        equal("one-eighty is south", "S", Compass.cardinal(180f));
+        equal("two-seventy is west", "W", Compass.cardinal(270f));
+        equal("three-fifteen is north-west", "NW", Compass.cardinal(315f));
+        equal("359 is north again", "N", Compass.cardinal(359f));
+        equal("a negative heading wraps", "W", Compass.cardinal(-90f));
+        equal("no sensor is a sentence", "no reading", Compass.cardinal(Float.NaN));
+        equal("whole degrees", "147\u00b0", Compass.degrees(147.4f));
+        equal("a negative degree wraps", "359\u00b0", Compass.degrees(-1f));
+        equal("no reading has no number", "\u2014", Compass.degrees(Float.NaN));
+        equal("the line reads like a compass", "0\u00b0  N", Compass.line(0f));
+        ok("high accuracy is named", Compass.accuracy(3).contains("high"));
+        ok("a bad field is named", Compass.accuracy(0).contains("unreliable"));
+        ok("a silent sensor is named", Compass.accuracy(-1).contains("waiting"));
+        near("normalise keeps the circle", 350.0, Compass.normalise(-10f), 0.001);
+    }
+
+    // ---------------------------------------------------------------- library
+
+    private static void library() throws RuntimeException {
+        equal("pdf kind", "PDF", Library.kind("Map.PDF"));
+        equal("epub kind", "EPUB", Library.kind("book.epub"));
+        equal("csv kind", "CSV", Library.kind("counts.tsv"));
+        equal("text kind", "TEXT", Library.kind("notes.md"));
+        equal("odd kind", "OTHER", Library.kind("reading.dat"));
+        equal("no extension is other", "OTHER", Library.kind("README"));
+        equal("pdf mime", "application/pdf", Library.mime("a.pdf"));
+        equal("epub mime", "application/epub+zip", Library.mime("a.epub"));
+        equal("csv mime", "text/csv", Library.mime("a.csv"));
+        equal("txt mime", "text/plain", Library.mime("a.txt"));
+        equal("unknown mime is a wildcard", "*/*", Library.mime("a.dat"));
+        ok("a photo is not material", !Library.isMaterial("IMG_1.jpg"));
+        ok("a hidden file is not material", !Library.isMaterial(".nomedia"));
+        ok("a pdf is material", Library.isMaterial("a.pdf"));
+        equal("zero bytes", "0 bytes", Library.size(0));
+        equal("one byte", "1 byte", Library.size(1));
+        equal("bytes", "999 bytes", Library.size(999));
+        equal("kilobytes", "1.0 KB", Library.size(1024));
+        equal("megabytes", "1.5 MB", Library.size(1572864));
+        equal("a stamp is a readable minute", 16, Library.stamp(0L).length());
+
+        File root = new File(System.getProperty("java.io.tmpdir"),
+                "fieldkit-library-" + System.nanoTime());
+        File nested = new File(root, "FieldKit/sub");
+        ok("temp tree", nested.mkdirs());
+        write(new File(root, "b.txt"), "bbb");
+        write(new File(root, "a.pdf"), "%PDF");
+        write(new File(nested, "Karta över ön.txt"), "accents");
+        write(new File(root, "photo.jpg"), "not material");
+        write(new File(root, "empty.csv"), "");
+        List<Library.Entry> scanned = Library.scan(
+                java.util.Collections.singletonList(root.getAbsolutePath()));
+        equal("the scan finds the documents, not the photo", 4, scanned.size());
+        boolean accented = false;
+        long emptySize = -1;
+        for (Library.Entry entry : scanned) {
+            if (entry.name.equals("Karta över ön.txt")) {
+                accented = true;
+            }
+            if (entry.name.equals("empty.csv")) {
+                emptySize = entry.size;
+            }
+        }
+        ok("a name with spaces and accents survives", accented);
+        equal("a zero-byte file keeps its zero", 0L, emptySize);
+
+        String remembered = Library.remember("", scanned, 1000L);
+        equal("nothing is gone on the first scan", 0, Library.gone(remembered, scanned).size());
+        new File(root, "a.pdf").delete();
+        List<Library.Entry> afterDelete = Library.scan(
+                java.util.Collections.singletonList(root.getAbsolutePath()));
+        equal("the delete is seen", 3, afterDelete.size());
+        List<Library.Entry> gone = Library.gone(remembered, afterDelete);
+        equal("the deleted file is remembered as gone", 1, gone.size());
+        equal("and it is named", "a.pdf", gone.get(0).name);
+        String remembered2 = Library.remember(remembered, afterDelete, 2000L);
+        equal("gone survives a rescan", 1, Library.gone(remembered2, afterDelete).size());
+        write(new File(root, "a.pdf"), "%PDF again");
+        List<Library.Entry> restored = Library.scan(
+                java.util.Collections.singletonList(root.getAbsolutePath()));
+        equal("a restored file is no longer gone", 0, Library.gone(remembered2, restored).size());
+        equal("broken lines are skipped", 4, Library.decode("junk\n" + remembered2).size());
+        ok("the remembered name is readable", Library.decode(remembered2).size() == 4);
+
+        deleteTree(root);
+    }
+
+    private static void write(File file, String text) {
+        try {
+            java.io.FileOutputStream out = new java.io.FileOutputStream(file);
+            out.write(text.getBytes("UTF-8"));
+            out.close();
+        } catch (java.io.IOException error) {
+            throw new RuntimeException(error);
+        }
+    }
+
+    private static void deleteTree(File file) {
+        File[] children = file.listFiles();
+        if (children != null) {
+            for (File child : children) {
+                deleteTree(child);
+            }
+        }
+        file.delete();
     }
 
     // ---------------------------------------------------------------- survey
